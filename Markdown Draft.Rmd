@@ -4,8 +4,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+#Loaded Libraries
 library(tidyverse)
 library(readxl)
+library(MASS)
+library(moveHMM)
 ```
 
 ## Load Data
@@ -14,6 +17,48 @@ library(readxl)
 ```{r change wd}
 setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Data")
 
+
+# Chick rearing excel file 2011
 chk11 = read_excel("Coquet_2011_chickrearing_Tern_Tracks.xlsx", sheet = 1)
 ```
-new pull
+
+```{r select libraries}
+# Select specified columns
+
+chk11_cl = chk11 %>%
+    dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
+
+speciesnames = unique(chk11_cl$SPECIES)
+```
+
+```{r function get_df}
+get_df = function(df, species){
+  
+  species = enquo(species)
+  
+  # Simple function to extract species 
+    new_df = df %>%
+            filter(SPECIES == !!species) %>%
+            dplyr::select(-SPECIES)
+    
+    return(new_df)
+}
+```
+```{r}
+# dataframe by species - 2011 chickrearing
+
+chk11.arc = get_df(chk11_cl,speciesnames[1])
+
+chk11.sand = get_df(chk11_cl,speciesnames[2])
+
+chk11.comm = get_df(chk11_cl, speciesnames[3])
+
+chk11.comm.arc = get_df(chk11_cl, speciesnames[4])
+
+chk11.rose = get_df(chk11_cl, speciesnames[5])
+```
+
+
+```{r eda}
+unique(chk11_cl$SPECIES)
+```

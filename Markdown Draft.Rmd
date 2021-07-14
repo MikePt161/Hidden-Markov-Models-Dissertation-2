@@ -1,0 +1,18 @@
+---
+title: "Dissertation HMM"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+## Load Data
+
+
+```{r change wd}
+setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Data")
+
+chk11 = read_excel("Coquet_2011_chickrearing_Tern_Tracks.xlsx", sheet = 1)
+```

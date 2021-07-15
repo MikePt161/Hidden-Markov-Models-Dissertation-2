@@ -11,26 +11,55 @@ library(MASS)
 library(moveHMM)
 ```
 
-## Load Data
+### Load Data
 
+The column types are set accordingly, while others are skipped.
 
 ```{r change wd}
 setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Data")
 
 
-# Chick rearing excel file 2011
-chk11 = read_excel("Coquet_2011_chickrearing_Tern_Tracks.xlsx", sheet = 1)
+# Read Chick rearing excel file 2011
+
+chk11 = read_excel("Coquet_2011_chickrearing_Tern_Tracks.xlsx", sheet = 1,
+                   col_types = c("date", # Date column
+                                 "skip", # skip colony
+                                 "text", # Species column
+                                 "numeric", # Track ID
+                                 "skip","skip","skip", # skip HR MIN SEC
+                                 "numeric","text",     # TSECS & CONTBEH
+                                 "skip","skip",  # INSTANTBEH, FORAGESUC,
+                                 "skip","skip", # PREYSIZE, PREYSPECIES
+                                 "skip","skip",   # PREYFATE, NOTES
+                                 "numeric","numeric", # BGNX, BGNY
+                                 "numeric", "numeric", # LATITUDE, LONGITUDE
+                                 "numeric","numeric", #DISTKM, DIST2COL
+                                 "numeric","numeric" # BRG2COL, COMPLETE
+                                 )
+)
+
+# turn contbeh to factor 
+chk11$CONTBEH = as.factor(chk11$CONTBEH)
+
+# rename TRACKID to ID
+chk11 = chk11 %>%
+  rename(
+    ID = TRACKID
+  )
 ```
 
 ```{r select libraries}
-# Select specified columns
+# copy dataset
 
-chk11_cl = chk11 %>%
-    dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
+chk11_cl = chk11 #%>%
+    #dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
 
+# Save species names
 speciesnames = unique(chk11_cl$SPECIES)
 ```
-
+\
+We will split the initial dataframe to sub-datasets per species. A function
+is defined below that serves this specific reason.\ 
 ```{r function get_df}
 get_df = function(df, species){
   
@@ -41,9 +70,10 @@ get_df = function(df, species){
             filter(SPECIES == !!species) %>%
             dplyr::select(-SPECIES)
     
-    return(new_df)
+    return(as.data.frame(new_df))
 }
 ```
+
 ```{r}
 # dataframe by species - 2011 chickrearing
 
@@ -59,6 +89,64 @@ chk11.rose = get_df(chk11_cl, speciesnames[5])
 ```
 
 
+
 ```{r eda}
-unique(chk11_cl$SPECIES)
+arc11.prepdata = prepData(chk11.arc, type = "LL", coordNames = c("LATITUDE","LONGITUDE"))
+```
+
+
+```{r}
+which(is.na(arc11.prepdata$step))
+arc11.prepdata[which.max(arc11.prepdata$step),]
+```
+```{r}
+#experiment for starting values
+hist(arc11.prepdata$step)
+    
+length(which(arc11.prepdata == 0))/nrow(arc11.prepdata)
+
+
+```
+```{r}
+
+hist(arc11.prepdata$angle, breaks = seq(-pi,pi,length = 15))
+```
+```{r}
+# 4 States for HMM
+nbStates = 2
+
+# default Initial Values for distributions
+beta0 = NULL
+delta0 = NULL
+
+formula = ~1
+
+# Distributions used
+stepDist = "gamma"
+angleDist = "vm"
+
+angleMean = NULL
+stationary = FALSE
+
+
+mu0 = c(0.003,0.015)
+sigma0 = c(0.005,0.005)
+zeromass0 = c(0.62,0.1)
+stepPar0 = c(mu0, sigma0, zeromass0)
+
+angleMean0 = c(0,0)
+kappa0 = c(1,1)
+anglePar0 = c(angleMean0,kappa0)
+```
+
+```{r}
+m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+```
+
+```{r}
+#par(mfrow = c(1,2))
+plot(m, plotCI = TRUE, plotTracks = FALSE)
+```
+```{r}
+states = viterbi(m)
 ```

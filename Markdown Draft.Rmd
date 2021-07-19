@@ -93,17 +93,15 @@ chk11.rose = get_df(chk11_cl, speciesnames[5]) # roseate
 ```
 
 
-
+### Arctic
+#### Models and Plots
 ```{r prepData}
 arc11.prepdata = prepData(chk11.arc, type = "LL", coordNames = c("LONGITUDE","LATITUDE"))
 ```
 
 
 ```{r}
-which(is.na(arc11.prepdata$step))
-arc11.prepdata[which.max(arc11.prepdata$step),]
-
-test =  arc11.prepdata %>% 
+arc11.prepdata_revised =  arc11.prepdata %>% 
   filter(arc11.prepdata$CONTBEH != "END" | arc11.prepdata$CONTBEH != "End") 
 ```
 ```{r}
@@ -116,8 +114,8 @@ hist(arc11.prepdata$step, breaks = seq(0,0.019, l = 30))
 hist(arc11.prepdata$angle, breaks = seq(-pi,pi,length =100))
 ```
 
-
-BASIC 
+\
+Basic model fitting using whole dataset.\
 
 ```{r fit basic}
 # 4 States for HMM
@@ -150,50 +148,37 @@ anglePar0 = c(angleMean0,kappa0)
 
 arc_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
+
 ```{r}
 #par(mfrow = c(1,2))
 plot(arc_basic_m, plotCI = TRUE, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
 ```
-```{r fit test}
-# NO ENDS and End
-hmmtest = fitHMM(data = test, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+Fitting on a revised dataset, with "End" and "END" states being removed.\
+
+```{r fit revised}
+# Fitting with no END and End
+arc_revised_m = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
 
-```{r plot test}
-plot(hmmtest,plotCI = T, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
+```{r plot revised }
+plot(arc_revised_m,plotCI = T, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
 ```
-
-```{r confusion matrix test}
-statestest = viterbi(hmmtest) %>% as.factor
-recodedtest = test$CONTBEH %>%
-  recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-  as.factor()
-
-conftest = confusionMatrix(statestest,recodedtest)
-
-conftest
-```
-
-```{r confusion matrix basic}
-states = viterbi(arc_basic_m) %>% as.factor()
-
-recoded = chk11.arc$CONTBEH %>%
-  recode("TS" = 2, "AS" = 1, "DF" = 2, "END" =2, "End" = 2) %>% 
-  as.factor()
-
-confusionMatrix(states, recoded)
-```
-
+\
+It has been concluded that adding more variables worsens model performance.\
 ```{r additional models}
 disthmm = fitHMM(data = test, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = ~ DIST2COL + BRG2COL + DISTKM + TSECS)
 ```
 
+\ 
+The AIC values will ensure that we have chosen the correct model (~1) for the analysis. As it will be shown, the acurracies between the test and 
 ```{r AIC}
-AIC(arc_basic_m, hmmtest, m1, disthmm)
+AIC(arc_basic_m, arc_revised_m, m1, disthmm)
 ```
-
-Parallel package
+\
+The following procedure helps with running multiple iterations with randomised initial values, to ensure model has converged. The "parallel" package will assist with lower computation time. \
+\
 ```{r parallel}
+#Seed set for reproducability
 set.seed(1)
 
 n_iter = 5
@@ -227,12 +212,38 @@ allPar0 = lapply(as.list(1:n_iter), function(x){
 })
 
 model_parallel = parLapply(cl = cl, X = allPar0, fun = function(par0) {
-m <- fitHMM(data = arc11.prepdata, nbStates = 2, stepPar0 = par0$step,
+m <- fitHMM(data = arc11.prepdata_revised, nbStates = 2, stepPar0 = par0$step,
 anglePar0 = par0$angle)
 
 return(m)
 })
 ```
+
+#### Confusion Matrices
+
+```{r confusion matrix basic}
+states = viterbi(arc_basic_m) %>% as.factor()
+
+recoded = chk11.arc$CONTBEH %>%
+  recode("TS" = 2, "AS" = 1, "DF" = 2, "END" =2, "End" = 2) %>% 
+  as.factor()
+
+confusionMatrix(states, recoded)
+```
+
+```{r confusion matrix revised}
+statestest = viterbi(arc_revised_m) %>% as.factor
+recodedtest = test$CONTBEH %>%
+  recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+  as.factor()
+
+conftest = confusionMatrix(statestest,recodedtest)
+
+conftest
+```
+
+
+
 
 ```{r slow version}
 
@@ -271,4 +282,4 @@ allnllk
 ```
 
 
-```
+### Sandwitch 

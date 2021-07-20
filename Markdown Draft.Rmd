@@ -3,7 +3,7 @@ title: "Dissertation HMM"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=TRUE}
 #Loaded Libraries
 library(tidyverse)
 library(readxl)
@@ -17,7 +17,7 @@ library(parallel)
 
 The column types are set accordingly, while others are skipped.
 
-```{r change wd}
+```{r load data}
 setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Data")
 
 
@@ -67,6 +67,15 @@ is defined below that serves this specific reason.\
 ```{r function get_df}
 get_df = function(df, species){
   
+  ## Input:
+  
+  # df: dataframe to be filtered
+  # species: species to be subsetted from df
+  
+  ## Output:
+  
+  # new_df: new dataframe containing examined species 
+  
   species = enquo(species)
   
   # Simple function to extract species 
@@ -87,31 +96,50 @@ chk11.sand = get_df(chk11_cl,speciesnames[2]) # sandwich
 
 chk11.comm = get_df(chk11_cl, speciesnames[3]) # common
 
-chk11.comm.arc = get_df(chk11_cl, speciesnames[4]) # unsure
+chk11.comm.arc = get_df(chk11_cl, speciesnames[4]) # unsure (will not be used in the analysis)
 
 chk11.rose = get_df(chk11_cl, speciesnames[5]) # roseate
 ```
 
 
 ### Arctic
+\
 #### Models and Plots
-```{r prepData}
+```{r prepData arctic}
 arc11.prepdata = prepData(chk11.arc, type = "LL", coordNames = c("LONGITUDE","LATITUDE"))
 ```
 
+```{r revise prpData}
+# Removes End and End continuous statuses from prepData object
 
-```{r}
-arc11.prepdata_revised =  arc11.prepdata %>% 
-  filter(arc11.prepdata$CONTBEH != "END" | arc11.prepdata$CONTBEH != "End") 
+revise = function(df){
+  
+  new_df = df %>%
+    filter(df$CONTBEH != "END" & df$CONTBEH != "End")
+  
+  return(new_df)
+}
 ```
-```{r}
-#experiment for starting values
+
+```{r prepData arctic revised}
+arc11.prepdata_revised =  revise(arc11.prepdata)
+
+# Ensure that function worked as intented
+unique(arc11.prepdata_revised$CONTBEH)
+```
+\
+The histograms will be evaluated in order to define starting values. It seems that the histograms for the revised do not differ much (only 49 values were removed in the arctic 2011 case). Therefore picking similar starting values for both fitHMM instances is expected to produce the same optimization result. \
+```{r plot prepdata step}
+#Check differences between dataframes -step
+par(mfrow= c(1,2))
 hist(arc11.prepdata$step, breaks = seq(0,0.019, l = 30))
-
+hist(arc11.prepdata_revised$step, breaks = seq(0,0.019, l = 30))
 ```
-```{r}
-
-hist(arc11.prepdata$angle, breaks = seq(-pi,pi,length =100))
+```{r plot prep data angle}
+#check differences between dataframes - angle
+par(mfrow= c(1,2))
+hist(arc11.prepdata$angle, breaks = seq(-pi,pi,length =50))
+hist(arc11.prepdata_revised$angle, breaks = seq(-pi,pi,length =50))
 ```
 
 \
@@ -146,47 +174,65 @@ angleMean0 = c(0,0)
 kappa0 = c(1,1)
 anglePar0 = c(angleMean0,kappa0)
 
-arc_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
 
-```{r}
+```{r plot basic}
 #par(mfrow = c(1,2))
-plot(arc_basic_m, plotCI = TRUE, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
+plot(arc11_basic_m, plotCI = TRUE, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
 ```
 Fitting on a revised dataset, with "End" and "END" states being removed.\
 
 ```{r fit revised}
 # Fitting with no END and End
-arc_revised_m = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+arc11_revised_m = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
 
-```{r plot revised }
-plot(arc_revised_m,plotCI = T, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
+```{r plot revised}
+plot(arc11_revised_m,plotCI = T, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
 ```
 \
-It has been concluded that adding more variables worsens model performance.\
+It has been concluded that adding more variables worsens model performance. Fitted states seem less sensible as well by using this model.\
 ```{r additional models}
 disthmm = fitHMM(data = test, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = ~ DIST2COL + BRG2COL + DISTKM + TSECS)
 ```
+\
+```{r plot additional models}
+plot(disthmm, plotTracks = F)
+```
 
 \ 
-The AIC values will ensure that we have chosen the correct model (~1) for the analysis. As it will be shown, the acurracies between the test and 
+The AIC values will ensure that we have chosen the correct model (~1) for the analysis. As it will be shown later by the confusion matrices, the accurracy percentages between the whole and revised prepData objects will be close.\
+\
 ```{r AIC}
-AIC(arc_basic_m, arc_revised_m, m1, disthmm)
+AIC(arc11_basic_m, arc11_revised_m, m1, disthmm)
 ```
 \
-The following procedure helps with running multiple iterations with randomised initial values, to ensure model has converged. The "parallel" package will assist with lower computation time. \
+The following function helps with running multiple iterations of the maximization process with randomized initial values. The likelihood will be evaluated to ensure model has converged. The "parallel" package is also used and will assist by providing a lower computation time. \
 \
-```{r parallel}
-#Seed set for reproducability
+```{r fit experiment function}
+
+fit_experiment = function(str_obj,obj){
+
+
+#Inputs:
+#     str_obj : string name of dataframe we want to fit
+#     obj: actual object of dataframe we want to fit
+
+#Output:
+#     model_parallel: list of 5 fitted models
+
+  
+#Seed set outside iteration for reproducible results
 set.seed(1)
 
+# 5 iterations of the maximisation process will be used
 n_iter = 5
 
 ncores = detectCores() - 1
 cl = makeCluster(getOption("cl.cores",ncores))
 
-clusterExport(cl, list("arc11.prepdata","fitHMM"))
+clusterExport(cl, list(str_obj,"fitHMM"))
 
 allPar0 = lapply(as.list(1:n_iter), function(x){
   
@@ -211,18 +257,38 @@ allPar0 = lapply(as.list(1:n_iter), function(x){
   return(list(step = steppar0_f, angle = anglePar0_f))
 })
 
+# parallel computing
 model_parallel = parLapply(cl = cl, X = allPar0, fun = function(par0) {
-m <- fitHMM(data = arc11.prepdata_revised, nbStates = 2, stepPar0 = par0$step,
+
+     m <- fitHMM(data = obj, nbStates = 2, stepPar0 = par0$step,
 anglePar0 = par0$angle)
 
-return(m)
-})
+    return(m)
+              }
+    )
+
+
+return(model_parallel)
+}
+```
+\
+Call function.
+\
+```{r parallel arcic}
+arctic_parallel_m = fit_experiment("arc11_revised_m", arc11_revised_m)
+```
+
+\
+All values depict the same likelihood for ~1 function. Therefore the likelihood has been maximised adequately.
+```{r print likelihoods arctic}
+unlist(lapply(arctic_parallel_m, function(m) m$mod$minimum))
 ```
 
 #### Confusion Matrices
-
+\
+Transit Search (TS) along with direct flight (DF) are described by higher flight speed and low turns, something that is captured by State 2. On the other hand, Active search (AS) is quite the opposite and will be recoded as state 1. The confusion matrices are given below for all models.\
 ```{r confusion matrix basic}
-states = viterbi(arc_basic_m) %>% as.factor()
+states = viterbi(arc11_basic_m) %>% as.factor()
 
 recoded = chk11.arc$CONTBEH %>%
   recode("TS" = 2, "AS" = 1, "DF" = 2, "END" =2, "End" = 2) %>% 
@@ -230,22 +296,41 @@ recoded = chk11.arc$CONTBEH %>%
 
 confusionMatrix(states, recoded)
 ```
+```{r confusion matrix function}
+confmatrx = function(model, model_data){
+  
+  ## Input:
+  #
+  # model: moveHMM object to be used in the viterbi function
+  # data: actual observations for evaluation
+  #
+  # Output:
+  #
+  # confrevised: ConfusionMatrix object from the package caret
 
-```{r confusion matrix revised}
-statestest = viterbi(arc_revised_m) %>% as.factor
-recodedtest = test$CONTBEH %>%
-  recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-  as.factor()
+  states = viterbi(model) %>% as.factor
+  recoded = model_data$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor()
 
-conftest = confusionMatrix(statestest,recodedtest)
+  confrevised = caret:: confusionMatrix(states,recoded)
 
-conftest
+return(confrevised)
+}
 ```
 
+```{r confusion matrix revised}
+conf_arct_revised = confmatrx(arc11_revised_m,arc11.prepdata_revised)
+conf_arct_revised
+```
+\ 
+The additional variables produce higher accuracy but also fail to adequately predict type 1 cases. The analysis indicates that ~1 produces the best model.\
+```{r conf matrix additional}
+statesadd = viterbi(disthmm) %>% as.factor
 
-
-
-```{r slow version}
+confusionMatrix(statesadd, recodedtest)
+```
+```{r slow version as comment}
 
 #niter = 5
 #model = list()
@@ -273,13 +358,80 @@ conftest
 #}
 ```
 
+```{r new coordinates discarded}
+#coord_arc = chk11
 
-\
-All values depict the same likelihood for ~1 function
-```{r}
-allnllk <- unlist(lapply(model_parallel, function(m) m$mod$minimum))
-allnllk
+
+
+#coord_arc = coord_arc %>% 
+#  mutate(new_latitude = deg(
+           
+#asin(
+  
+#sin(rad(LATITUDE))*cos(DISTKM/6378.1) +
+                               #cos(rad(LATITUDE))*sin(DISTKM/6378.1)*BRG2COL
+#     )
+#),
+#
+#new_longitude = LONGITUDE + #atan2(sin(BRG2COL)*sin(DISTKM/6378.1)*cos(rad(LATITUDE)),
+#      cos(DISTKM/6378.1)-sin(rad(LATITUDE))*sin(rad(new_latitu#de)))
+  
+#) %>%
+#  as.data.frame()
 ```
 
+```{r prepData coord new discarded}
+# = prepData(coord_arc, type = "LL", coordNames = #c("new_longitude","new_latitude"))
+```
+```{r plot coord prepdata discarded}
+#hist(coordprep$angle)
+```
 
-### Sandwitch 
+### Sandwich
+\
+The analysis will be the same as the previous section\
+\
+#### Data Manipulation
+
+```{r sandwich prepdata}
+sand11.prepdata = prepData(chk11.sand, type = "LL", coordNames = c("LONGITUDE","LATITUDE"))
+```
+```{r sandwich plots and revised}
+sand11.prepdata_revised = revise(sand11.prepdata)
+
+# Remove outlier 
+
+sand11.prepdata_revised = sand11.prepdata_revised[-which.max(sand11.prepdata_revised$step),]
+
+par(mfrow=c(1,2))
+hist(sand11.prepdata_revised$step, xlab = "Step")
+hist(sand11.prepdata_revised$angle, xlab = "Angle")
+```
+\
+#### Fit and Plots
+As previously we will run a parallel experiment to evaluate convergence.\
+
+```{r sand fit parallel}
+sand_parallel_m = fit_experiment("sand11.prepdata_revised",sand11.prepdata_revised)
+```
+
+```{r print likelihoods sand}
+# Print likelihoods
+unlist(lapply(sand_parallel_m, function(m) m$mod$minimum))
+```
+\
+Convergence is reached based on the above results.
+```{r sand fit}
+sand_fit_m = fitHMM(data = sand11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+```
+\
+```{r sand plot}
+plot(sand_fit_m,  plotTracks = F, title = "Sandwich 2011")
+```
+#### Confusion Matrix
+
+```{r sandwich confusion matrix}
+conf_sand = confmatrx(sand_fit_m,sand11.prepdata_revised)
+
+conf_sand
+```

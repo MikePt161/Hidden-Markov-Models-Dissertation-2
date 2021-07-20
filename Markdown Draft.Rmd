@@ -344,10 +344,9 @@ ggplot(as.data.frame(matrixobject$table), aes(x=Reference,y=Prediction, fill = F
    scale_fill_distiller(palette = "Greens") + 
    geom_text(aes(label= paste(100*round(Freq/sum(Freq),4),"%"))) + 
     guides(fill = guide_legend(title = "Accurracy"))+
-    annotate("text", x=0.7,y =0.05, label = paste("Overall Acurracy:", 100*as.numeric(round(conf_arct_revised$overall[1],3)),"%" ))+
+    # Print acurracy of model extracted by matrix object
+    annotate("text", x=0.7,y =0.05, label = paste("Overall Acurracy:", 100*as.numeric(round(matrixobject$overall[1],3)),"%" ))+
     coord_cartesian(ylim = c(1,2),clip="off")
-    
-  
 }
 ```
 
@@ -363,7 +362,9 @@ The additional variables produce higher accuracy but also fail to adequately pre
 ```{r conf matrix additional}
 statesadd = viterbi(disthmm) %>% as.factor
 
-confusionMatrix(statesadd, recodedtest)
+conf_arc_add = confusionMatrix(statesadd, recodedtest)
+
+heat_map_custom(conf_arc_add, "Arctic 2011 -Additional Models")
 ```
 ```{r slow version as comment}
 

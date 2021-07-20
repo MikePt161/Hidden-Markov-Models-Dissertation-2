@@ -8,9 +8,10 @@ output: html_document
 library(tidyverse)
 library(readxl)
 library(MASS)
-library(moveHMM)
-library(caret)
-library(parallel)
+library(moveHMM)  
+library(caret)    # make conf.matrices
+library(parallel) # parallel computing
+library(ggplot2)  # data visualisation
 ```
 
 ### Load Data
@@ -299,6 +300,10 @@ confusionMatrix(states, recoded)
 ```{r confusion matrix function}
 confmatrx = function(model, model_data){
   
+  # Function that saves model states,
+  # transforms model data and prints caret
+  # elements
+  
   ## Input:
   #
   # model: moveHMM object to be used in the viterbi function
@@ -318,12 +323,42 @@ confmatrx = function(model, model_data){
 return(confrevised)
 }
 ```
+\
+A custom function will be implemented to make heatmaps from each confusion matrix.\
+\
+
+```{r heatmap function}
+
+heat_map_custom = function(matrixobject,str){
+  
+  
+  # Custom function that plots heatmaps and prints frequencies.
+  ## Inputs: 
+  # 
+  # matrixobject: caret object from which table will be extracted
+  # str: string to be used on title
+  
+  
+ggplot(as.data.frame(matrixobject$table), aes(x=Reference,y=Prediction, fill = Freq/sum(Freq))) + geom_tile() + theme_bw() +
+    ggtitle(paste("Confusion Matrix for",str))+
+   scale_fill_distiller(palette = "Greens") + 
+   geom_text(aes(label= paste(100*round(Freq/sum(Freq),4),"%"))) + 
+    guides(fill = guide_legend(title = "Accurracy"))+
+    annotate("text", x=0.7,y =0.05, label = paste("Overall Acurracy:", 100*as.numeric(round(conf_arct_revised$overall[1],3)),"%" ))+
+    coord_cartesian(ylim = c(1,2),clip="off")
+    
+  
+}
+```
 
 ```{r confusion matrix revised}
 conf_arct_revised = confmatrx(arc11_revised_m,arc11.prepdata_revised)
 conf_arct_revised
 ```
 \ 
+```{r plot heatmap for revised model}
+heat_map_custom(conf_arct_revised,"Arctic chickrearing - 2011")
+```
 The additional variables produce higher accuracy but also fail to adequately predict type 1 cases. The analysis indicates that ~1 produces the best model.\
 ```{r conf matrix additional}
 statesadd = viterbi(disthmm) %>% as.factor
@@ -433,5 +468,5 @@ plot(sand_fit_m,  plotTracks = F, title = "Sandwich 2011")
 ```{r sandwich confusion matrix}
 conf_sand = confmatrx(sand_fit_m,sand11.prepdata_revised)
 
-conf_sand
+heat_map_custom(conf_sand, sand11.prepdata_revised)
 ```

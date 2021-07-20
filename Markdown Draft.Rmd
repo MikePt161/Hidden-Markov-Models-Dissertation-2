@@ -88,7 +88,7 @@ get_df = function(df, species){
 }
 ```
 
-```{r}
+```{r get dfs by species}
 # dataframe by species - 2011 chickrearing
 
 chk11.arc = get_df(chk11_cl,speciesnames[1]) # arctic
@@ -288,15 +288,16 @@ unlist(lapply(arctic_parallel_m, function(m) m$mod$minimum))
 #### Confusion Matrices
 \
 Transit Search (TS) along with direct flight (DF) are described by higher flight speed and low turns, something that is captured by State 2. On the other hand, Active search (AS) is quite the opposite and will be recoded as state 1. The confusion matrices are given below for all models.\
-```{r confusion matrix basic}
-states = viterbi(arc11_basic_m) %>% as.factor()
+```{r confusion matrix basic discarded}
+#states = viterbi(arc11_basic_m) %>% as.factor()
 
-recoded = chk11.arc$CONTBEH %>%
-  recode("TS" = 2, "AS" = 1, "DF" = 2, "END" =2, "End" = 2) %>% 
-  as.factor()
+#recoded = chk11.arc$CONTBEH %>%
+#  recode("TS" = 2, "AS" = 1, "DF" = 2, "END" =2, "End" = 2) #%>% 
+#  as.factor()
 
-confusionMatrix(states, recoded)
+#confusionMatrix(states, recoded)
 ```
+
 ```{r confusion matrix function}
 confmatrx = function(model, model_data){
   
@@ -462,12 +463,38 @@ sand_fit_m = fitHMM(data = sand11.prepdata_revised, nbStates = nbStates, stepPar
 ```
 \
 ```{r sand plot}
-plot(sand_fit_m,  plotTracks = F, title = "Sandwich 2011")
+plot(sand_fit_m,  plotTracks = F)
 ```
 #### Confusion Matrix
 
 ```{r sandwich confusion matrix}
 conf_sand = confmatrx(sand_fit_m,sand11.prepdata_revised)
 
-heat_map_custom(conf_sand, sand11.prepdata_revised)
+heat_map_custom(conf_sand, "sand11.prepdata_revised"
+                )
+```
+### Common
+
+#### Data Manipulation
+```{r common prepdata}
+comm11.prepdata = prepData(chk11.comm, type = "LL", coordNames = c("LONGITUDE","LATITUDE"))
+```
+
+```{r common revise & Plot}
+comm11.prepdata_revised = revise(comm11.prepdata)
+
+par(mfrow = c(1,2))
+hist(comm11.prepdata_revised$step, seq(0,0.019,l=40))
+hist(comm11.prepdata_revised$angle,seq(-pi,pi,l=40))
+```
+#### Fit and Plots
+\
+
+```{r common fit parallel}
+common_parallel_m = fit_experiment("comm11.prepdata_revised",comm11.prepdata_revised)
+```
+
+```{r print likelihoods common}
+# Print likelihoods
+unlist(lapply(common_parallel_m, function(m) m$mod$minimum))
 ```

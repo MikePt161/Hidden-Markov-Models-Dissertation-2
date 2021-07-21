@@ -130,18 +130,17 @@ unique(arc11.prepdata_revised$CONTBEH)
 ```
 \
 The histograms will be evaluated in order to define starting values. It seems that the histograms for the revised do not differ much (only 49 values were removed in the arctic 2011 case). Therefore picking similar starting values for both fitHMM instances is expected to produce the same optimization result. \
-```{r plot prepdata step}
+```{r plot prepdata differences}
 #Check differences between dataframes -step
-par(mfrow= c(1,2))
-hist(arc11.prepdata$step, breaks = seq(0,0.019, l = 30))
-hist(arc11.prepdata_revised$step, breaks = seq(0,0.019, l = 30))
+par(mfrow= c(2,2))
+hist(arc11.prepdata$step, breaks = seq(0,0.019, l = 30), xlab = "Step" , main = "Original Dataframe")
+hist(arc11.prepdata_revised$step, breaks = seq(0,0.019, l = 30), xlab = "Step", main = "End status removed")
+
+
+hist(arc11.prepdata$angle, breaks = seq(-pi,pi,length =50), xlab = "Angle", main = "")
+hist(arc11.prepdata_revised$angle, breaks = seq(-pi,pi,length =50), xlab = "Angle", main = "")
 ```
-```{r plot prep data angle}
-#check differences between dataframes - angle
-par(mfrow= c(1,2))
-hist(arc11.prepdata$angle, breaks = seq(-pi,pi,length =50))
-hist(arc11.prepdata_revised$angle, breaks = seq(-pi,pi,length =50))
-```
+It is apparent that removing End & END continuous behaviours plays no major role in the analysis.
 
 \
 Basic model fitting using whole dataset.\
@@ -180,7 +179,7 @@ arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = st
 
 ```{r plot basic}
 #par(mfrow = c(1,2))
-plot(arc11_basic_m, plotCI = TRUE, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
+plot(arc11_basic_m, plotCI = TRUE, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
 ```
 Fitting on a revised dataset, with "End" and "END" states being removed.\
 
@@ -190,12 +189,12 @@ arc11_revised_m = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, ste
 ```
 
 ```{r plot revised}
-plot(arc11_revised_m,plotCI = T, plotTracks = FALSE, breaks = seq(0,0.019,l=60))
+plot(arc11_revised_m,plotCI = T, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
 ```
 \
 It has been concluded that adding more variables worsens model performance. Fitted states seem less sensible as well by using this model.\
-```{r additional models}
-disthmm = fitHMM(data = test, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = ~ DIST2COL + BRG2COL + DISTKM + TSECS)
+```{r fit additional models}
+disthmm = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = ~ DIST2COL + BRG2COL + DISTKM + TSECS)
 ```
 \
 ```{r plot additional models}
@@ -206,7 +205,7 @@ plot(disthmm, plotTracks = F)
 The AIC values will ensure that we have chosen the correct model (~1) for the analysis. As it will be shown later by the confusion matrices, the accurracy percentages between the whole and revised prepData objects will be close.\
 \
 ```{r AIC}
-AIC(arc11_basic_m, arc11_revised_m, m1, disthmm)
+AIC(arc11_basic_m, arc11_revised_m, disthmm)
 ```
 \
 The following function helps with running multiple iterations of the maximization process with randomized initial values. The likelihood will be evaluated to ensure model has converged. The "parallel" package is also used and will assist by providing a lower computation time. \
@@ -218,7 +217,7 @@ fit_experiment = function(str_obj,obj){
 
 #Inputs:
 #     str_obj : string name of dataframe we want to fit
-#     obj: actual object of dataframe we want to fit
+#     obj: prepData actual object of dataframe we want to fit
 
 #Output:
 #     model_parallel: list of 5 fitted models
@@ -276,7 +275,7 @@ return(model_parallel)
 Call function.
 \
 ```{r parallel arcic}
-arctic_parallel_m = fit_experiment("arc11_revised_m", arc11_revised_m)
+arctic_parallel_m = fit_experiment("arc11.prepdata_revised", arc11.prepdata_revised)
 ```
 
 \
@@ -287,7 +286,23 @@ unlist(lapply(arctic_parallel_m, function(m) m$mod$minimum))
 
 #### Confusion Matrices
 \
-Transit Search (TS) along with direct flight (DF) are described by higher flight speed and low turns, something that is captured by State 2. On the other hand, Active search (AS) is quite the opposite and will be recoded as state 1. The confusion matrices are given below for all models.\
+As shown by the histograms below, Transit Search (TS) along with direct flight (DF) are described by higher flight speed and low turns, something that is captured by State 2. On the other hand, Active search (AS) is quite the opposite and will be recoded as state 1. The confusion matrices are given below for all models.\
+```{r 2 states histogram}
+par(mfrow = c(2,2))
+hist(arc11.prepdata_revised$step[which((arc11.prepdata_revised$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==2)] ,breaks = 55 , xlab = "Step", main = "Arctic - TS & DF")
+hist(arc11.prepdata_revised$step[which((arc11.prepdata_revised$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==1)] ,breaks = 55 , xlab = "Step", main = "Arctic - AS")
+hist(arc11.prepdata_revised$angle[which((arc11.prepdata_revised$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==2)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = "")
+hist(arc11.prepdata_revised$angle[which((arc11.prepdata_revised$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==1)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = "")
+```
+
 ```{r confusion matrix basic discarded}
 #states = viterbi(arc11_basic_m) %>% as.factor()
 
@@ -325,7 +340,7 @@ return(confrevised)
 }
 ```
 \
-A custom function will be implemented to make heatmaps from each confusion matrix.\
+A custom function will be implemented to create heatmaps from each confusion matrix.\
 \
 
 ```{r heatmap function}
@@ -346,7 +361,7 @@ ggplot(as.data.frame(matrixobject$table), aes(x=Reference,y=Prediction, fill = F
    geom_text(aes(label= paste(100*round(Freq/sum(Freq),4),"%"))) + 
     guides(fill = guide_legend(title = "Accurracy"))+
     # Print acurracy of model extracted by matrix object
-    annotate("text", x=0.7,y =0.05, label = paste("Overall Acurracy:", 100*as.numeric(round(matrixobject$overall[1],3)),"%" ))+
+    annotate("text", x=0.7,y =0.2, label = paste("Overall Acurracy:", 100*as.numeric(round(matrixobject$overall[1],4)),"%" ))+
     coord_cartesian(ylim = c(1,2),clip="off")
 }
 ```
@@ -359,14 +374,27 @@ conf_arct_revised
 ```{r plot heatmap for revised model}
 heat_map_custom(conf_arct_revised,"Arctic chickrearing - 2011")
 ```
+
+
+```{r experiment}
+#hist(arc11.prepdata_revised$step[which((viterbi(arc11_revised_m)) !=  ((arc11.prepdata_revised$CONTBEH %>%
+#         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+#         as.factor())==1))], breaks = 60)
+
+```
+
+
+
 The additional variables produce higher accuracy but also fail to adequately predict type 1 cases. The analysis indicates that ~1 produces the best model.\
 ```{r conf matrix additional}
-statesadd = viterbi(disthmm) %>% as.factor
-
-conf_arc_add = confusionMatrix(statesadd, recodedtest)
+conf_arc_add = confmatrx(disthmm, arc11.prepdata_revised)
 
 heat_map_custom(conf_arc_add, "Arctic 2011 -Additional Models")
 ```
+
+```{r test}
+```
+
 ```{r slow version as comment}
 
 #niter = 5

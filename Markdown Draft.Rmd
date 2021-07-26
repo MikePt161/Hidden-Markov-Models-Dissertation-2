@@ -303,16 +303,6 @@ hist(arc11.prepdata_revised$angle[which((arc11.prepdata_revised$CONTBEH %>%
          as.factor())==1)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = "")
 ```
 
-```{r confusion matrix basic discarded}
-#states = viterbi(arc11_basic_m) %>% as.factor()
-
-#recoded = chk11.arc$CONTBEH %>%
-#  recode("TS" = 2, "AS" = 1, "DF" = 2, "END" =2, "End" = 2) #%>% 
-#  as.factor()
-
-#confusionMatrix(states, recoded)
-```
-
 ```{r confusion matrix function}
 confmatrx = function(model, model_data){
   
@@ -377,9 +367,9 @@ heat_map_custom(conf_arct_revised,"Arctic chickrearing - 2011")
 
 
 ```{r experiment}
-#hist(arc11.prepdata_revised$step[which((viterbi(arc11_revised_m)) !=  ((arc11.prepdata_revised$CONTBEH %>%
-#         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-#         as.factor())==1))], breaks = 60)
+hist(arc11.prepdata_revised$step[which((viterbi(arc11_revised_m)) !=  ((arc11.prepdata_revised$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==2))], breaks = 60)
 
 ```
 

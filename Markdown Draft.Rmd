@@ -12,13 +12,14 @@ library(moveHMM)
 library(caret)    # make conf.matrices
 library(parallel) # parallel computing
 library(ggplot2)  # data visualisation
+library(gridExtra)
 ```
 
 ### Load Data
 
 The column types are set accordingly, while others are skipped.
 
-```{r load data}
+```{r load chickrearing 2011 data}
 setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Data")
 
 
@@ -53,11 +54,57 @@ chk11 = chk11 %>%
 #chk11 = chk11[order(chk11$ID,chk11$DATE,chk11$TSECS),]
 ```
 
+```{r load chichrearing 2010 data}
+setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Data")
+chk10 = read_excel("Coquet_2010_chickrearing_Tern_Tracks.xlsx", sheet = 1,
+                   col_types = c("date", # Date column
+                                 "skip", # skip colony
+                                 "text", # Species column
+                                 "numeric", # Track ID
+                                 "skip","skip","skip", # skip HR MIN SEC
+                                 "numeric","text",     # TSECS & CONTBEH
+                                 "skip","skip",  # INSTANTBEH, FORAGESUC,
+                                 "skip","skip", # PREYSIZE, PREYSPECIES
+                                 "skip","skip",   # PREYFATE, NOTES
+                                 "numeric","numeric", # BGNX, BGNY
+                                 "numeric", "numeric", # LATITUDE, LONGITUDE
+                                 "numeric","numeric", #DISTKM, DIST2COL
+                                 "numeric","numeric" # BRG2COL, COMPLETE
+                   )
+)
+```
+
+### Exploratory Data Analysis
+
+\
+A function that removes the "END" and "End" states is defined at this point and will be used in the validation and exploratory data analysis parts.\
+```{r revise prpData}
+# Removes End and End continuous statuses from prepData object
+
+revise = function(df){
+  
+  new_df = df %>%
+    filter(df$CONTBEH != "END" & df$CONTBEH != "End")
+  
+  return(new_df)
+}
+```
+
+```{r EDA}
+plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic")), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
+  geom_boxplot() + ggtitle("2011") + xlab("")
+plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(CONTBEH != "REST"), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
+  geom_boxplot() + ggtitle("2010") 
+grid.arrange(plot1,plot2)
+```
+
+
+
 ```{r select libraries}
+
 # copy dataset
 
-chk11_cl = chk11 #%>%
-    #dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
+chk11_cl = chk11 
 
 # Save species names
 speciesnames = unique(chk11_cl$SPECIES)
@@ -97,7 +144,7 @@ chk11.sand = get_df(chk11_cl,speciesnames[2]) # sandwich
 
 chk11.comm = get_df(chk11_cl, speciesnames[3]) # common
 
-chk11.comm.arc = get_df(chk11_cl, speciesnames[4]) # unsure (will not be used in the analysis)
+# common/arct - unsure (will not be used in the analysis)
 
 chk11.rose = get_df(chk11_cl, speciesnames[5]) # roseate
 ```
@@ -108,18 +155,6 @@ chk11.rose = get_df(chk11_cl, speciesnames[5]) # roseate
 #### Models and Plots
 ```{r prepData arctic}
 arc11.prepdata = prepData(chk11.arc, type = "LL", coordNames = c("LONGITUDE","LATITUDE"))
-```
-
-```{r revise prpData}
-# Removes End and End continuous statuses from prepData object
-
-revise = function(df){
-  
-  new_df = df %>%
-    filter(df$CONTBEH != "END" & df$CONTBEH != "End")
-  
-  return(new_df)
-}
 ```
 
 ```{r prepData arctic revised}
@@ -335,23 +370,34 @@ A custom function will be implemented to create heatmaps from each confusion mat
 
 ```{r heatmap function}
 
-heat_map_custom = function(matrixobject,str){
+heat_map_custom = function(matrixobject,str, showleg = T, size = 3, x = 0.7, y = 0.2, xlab = "Reference", ylab = "Prediction"){
   
   
   # Custom function that plots heatmaps and prints frequencies.
-  ## Inputs: 
+  #### Inputs: 
   # 
   # matrixobject: caret object from which table will be extracted
   # str: string to be used on title
+  # showleg: True/False variable, whether to print legend or not
+  # size: size of text underneath plot
+  # x, y = coordinates of printed text
+  # xlab, ylab = labels of x and y axis
+  #
+  ### Outputs:
+  #
+  # Heatmap plot that describes model acurracy
   
   
-ggplot(as.data.frame(matrixobject$table), aes(x=Reference,y=Prediction, fill = Freq/sum(Freq))) + geom_tile() + theme_bw() +
-    ggtitle(paste("Confusion Matrix for",str))+
+ggplot(as.data.frame(matrixobject$table), aes(x=Reference,y=Prediction, fill = Freq/sum(Freq))) + geom_tile(show.legend = showleg) + theme_bw() + 
+    theme(axis.text = element_text(size = 8),
+          axis.title = element_text(size = 10)) + 
+    xlab(xlab) + ylab(ylab) + 
+    ggtitle(paste(str))+
    scale_fill_distiller(palette = "Greens") + 
    geom_text(aes(label= paste(100*round(Freq/sum(Freq),4),"%"))) + 
     guides(fill = guide_legend(title = "Accurracy"))+
     # Print acurracy of model extracted by matrix object
-    annotate("text", x=0.7,y =0.2, label = paste("Overall Acurracy:", 100*as.numeric(round(matrixobject$overall[1],4)),"%" ))+
+    annotate("text", x=x,y = y, label = paste("Overall Acurracy:", 100*as.numeric(round(matrixobject$overall[1],4)),"%" ) , size = size)+
     coord_cartesian(ylim = c(1,2),clip="off")
 }
 ```
@@ -361,8 +407,9 @@ conf_arct_revised = confmatrx(arc11_revised_m,arc11.prepdata_revised)
 conf_arct_revised
 ```
 \ 
-```{r plot heatmap for revised model}
-heat_map_custom(conf_arct_revised,"Arctic chickrearing - 2011")
+```{r arctic plot heatmap for revised model}
+heat_arctic = heat_map_custom(conf_arct_revised,"Arctic",showleg = F, xlab = "", x = 0.9, y =0.015, size = 2.5)
+heat_arctic
 ```
 
 
@@ -380,66 +427,6 @@ The additional variables produce higher accuracy but also fail to adequately pre
 conf_arc_add = confmatrx(disthmm, arc11.prepdata_revised)
 
 heat_map_custom(conf_arc_add, "Arctic 2011 -Additional Models")
-```
-
-```{r test}
-```
-
-```{r slow version as comment}
-
-#niter = 5
-#model = list()
-
-#for (i in 1:niter){
-#  stepMean0 = runif(2,
-#                    min = c(0.002,0.008),
-#                    max = c(0.005,0.015)
-#  )
-#  stepSD0 = runif(2,
-#                    min = c(0.001,0.001),
-#                    max = c(0.001,0.003)
-#  )
-#  angleMean0 = c(0,0)
-#  angleConc0 = runif(2,
-#                    min = c(0.05,1),
-#                    max = c(0.5,2)
-#  )
-#  
-#  steppar0_rep = c(stepMean0, stepSD0,zeromass0)
-#  anglePar0_rep = c(angleMean0,angleConc0)
-#  
-#  model[[i]] = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = steppar0_rep, anglePar0 = anglePar0_rep, formula = formula)
-#  
-#}
-```
-
-```{r new coordinates discarded}
-#coord_arc = chk11
-
-
-
-#coord_arc = coord_arc %>% 
-#  mutate(new_latitude = deg(
-           
-#asin(
-  
-#sin(rad(LATITUDE))*cos(DISTKM/6378.1) +
-                               #cos(rad(LATITUDE))*sin(DISTKM/6378.1)*BRG2COL
-#     )
-#),
-#
-#new_longitude = LONGITUDE + #atan2(sin(BRG2COL)*sin(DISTKM/6378.1)*cos(rad(LATITUDE)),
-#      cos(DISTKM/6378.1)-sin(rad(LATITUDE))*sin(rad(new_latitu#de)))
-  
-#) %>%
-#  as.data.frame()
-```
-
-```{r prepData coord new discarded}
-# = prepData(coord_arc, type = "LL", coordNames = #c("new_longitude","new_latitude"))
-```
-```{r plot coord prepdata discarded}
-#hist(coordprep$angle)
 ```
 
 ### Sandwich
@@ -488,8 +475,7 @@ plot(sand_fit_m,  plotTracks = F)
 ```{r sandwich confusion matrix}
 conf_sand = confmatrx(sand_fit_m,sand11.prepdata_revised)
 
-heat_map_custom(conf_sand, "sand11.prepdata_revised"
-                )
+heat_sand = heat_map_custom(conf_sand, "Sandwich", size = 2.5, F, x = 0.9, y =0.015, xlab = "", ylab = "")
 ```
 ### Common
 
@@ -515,4 +501,99 @@ common_parallel_m = fit_experiment("comm11.prepdata_revised",comm11.prepdata_rev
 ```{r print likelihoods common}
 # Print likelihoods
 unlist(lapply(common_parallel_m, function(m) m$mod$minimum))
+```
+```{r common fit}
+common_fit_m = fitHMM(data = comm11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+```
+
+```{r plot common}
+plot(common_fit_m, plotTracks = F)
+```
+```{r common confusion matrix}
+conf_common = confmatrx(common_fit_m,comm11.prepdata_revised)
+
+heat_common = heat_map_custom(conf_common, "Common", F, size = 2.5, x = 0.9, y =0.015)
+
+```
+
+### Roseate
+
+#### Load Data
+
+```{r rose prepdata}
+rose11.prepdata = prepData(chk11.rose, type = "LL", coordNames = c("LONGITUDE","LATITUDE"))
+```
+
+```{r rose prepdata revised & plot}
+rose11.prepdata_revised = revise(rose11.prepdata)
+
+par(mfrow = c(1,2))
+hist(rose11.prepdata_revised$step, seq(0,0.020,l=40))
+hist(rose11.prepdata_revised$angle,seq(-pi,pi,l=40))
+```
+#### Fit & Plots
+
+```{r rose fit parallel}
+rose_parallel_m = fit_experiment("rose11.prepdata_revised",rose11.prepdata_revised)
+```
+
+```{r print likelihoods rose}
+# Print likelihoods
+unlist(lapply(rose_parallel_m, function(m) m$mod$minimum))
+```
+\
+Convergence is reached based on the above results.
+```{r rose fit}
+rose_fit_m = fitHMM(data = rose11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+```
+\
+```{r rose plot}
+plot(rose_fit_m, plotTracks = F)
+```
+#### Confusion Matrix
+
+```{r rose confusion matrix}
+conf_rose = confmatrx(rose_fit_m,rose11.prepdata_revised)
+
+heat_rose = heat_map_custom(conf_rose, "Roseate", x = 0.9, y =0.015, size = 2.5, showleg = F, ylab = "")
+```
+
+## Summarise Plots
+```{r Steps per species}
+arcticplot_step = ggplot(arc11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Arctic") + xlab("") + ylab("Step")
+
+commplot_step = ggplot(comm11.prepdata_revised, aes(x = CONTBEH ,y = step, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Common") + xlab("") + ylab("")
+
+sandplot_step = ggplot(sand11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Sandwich") + ylab("Step")
+
+roseplot_step = ggplot(rose11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Roseate") + ylab("")
+
+step_per_species_2011 = grid.arrange(arcticplot_step,commplot_step,sandplot_step,roseplot_step, nrow = 2 , ncol = 2, top =  "Step")
+```
+
+```{r angle per species}
+arcticplot_angle = ggplot(arc11.prepdata_revised %>% na.omit, aes(x = CONTBEH, y = angle, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Arctic") + xlab("")
+
+commplot_angle = ggplot(comm11.prepdata_revised %>% na.omit, aes(x = CONTBEH ,y = angle, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Common")
+
+sandplot_angle = ggplot(sand11.prepdata_revised %>% na.omit, aes(x = CONTBEH, y = angle, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Sandwich")
+
+roseplot_angle = ggplot(rose11.prepdata_revised %>% na.omit, aes(x = CONTBEH, y = angle, fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("Roseate")
+
+angle_per_species_2011 = grid.arrange(arcticplot_angle,commplot_angle,sandplot_angle, roseplot_angle, nrow = 2 , ncol = 2, name = "Angle values per Behaviour", top = "Turning angles")
+```
+
+```{r summarised step plot}
+grid.arrange(step_per_species_2011,angle_per_species_2011, ncol =2, top = "Movement Characteristics by species and continuous behaviour" )
+```
+```{r}
+grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, top = "Confusion Matrices per species")
 ```

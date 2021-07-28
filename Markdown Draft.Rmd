@@ -560,7 +560,8 @@ conf_rose = confmatrx(rose_fit_m,rose11.prepdata_revised)
 heat_rose = heat_map_custom(conf_rose, "Roseate", x = 0.9, y =0.015, size = 2.5, showleg = F, ylab = "")
 ```
 
-## Summarise Plots
+## Summarised Plots
+
 ```{r Steps per species}
 arcticplot_step = ggplot(arc11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
   geom_boxplot(show.legend = F) + ggtitle("Arctic") + xlab("") + ylab("Step")
@@ -596,7 +597,7 @@ angle_per_species_2011 = grid.arrange(arcticplot_angle,commplot_angle,sandplot_a
 ```{r summarised step plot}
 grid.arrange(step_per_species_2011,angle_per_species_2011, ncol =2, top = "Movement Characteristics by species and continuous behaviour" )
 ```
-```{r}
+```{r summarised confusion matrices}
 grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, top = "Confusion Matrices per Species")
 ```
 # Mapping 
@@ -608,7 +609,7 @@ ukgrid <- "+init=epsg:27700"
 uk_ukgrid <- spTransform(uk, ukgrid)
 ```
 
-```{r map}
+```{r map per ID}
 ggplot () + geom_point(data=chk11 %>% filter(ID == 5), aes (x=BNGX, y=BNGY))
 #plot of tern GPS points in British National Grid coordinate system
 ```
@@ -616,5 +617,74 @@ ggplot () + geom_point(data=chk11 %>% filter(ID == 5), aes (x=BNGX, y=BNGY))
 ```{r}
 ggplot() +
 geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
-geom_point(data=chk11 %>% filter(SPECIES == "Arctic"), aes(x=BNGX,y=BNGY, color = ID))+coord_fixed(ratio = 1, xlim = c(min(chk11$BNGX),max(chk11$BNGX)), ylim = c(min(chk11$BNGY), max(chk11$BNGY)) )   #+ylim(5e+05,5.5e+05) + xlim(400000,50000)
+geom_point(data=comm11.prepdata_revised %>% filter(ID == unique(comm11.prepdata_revised$ID)[2]), aes(x=BNGX,y=BNGY, color = CONTBEH))+coord_fixed(ratio = 1, xlim = c(425000,430000+5000), ylim = c(600000, 600000+10000) )
+```
+
+```{r plotcomplete function}
+plotcomplete = function(df, complete = 1, str = "Title", legendshow = F){
+  #
+  #
+  # Function that plots behavioural tracks of all birds based on complete/incomplete status
+  #
+  #### Inputs:
+  #
+  # df: dataframe from which coordinates will be extracted
+  # complete:  1 for complete tracking, 0 for incomplete
+  # str: string to be used in title
+  # legendshow: whether to show legend or not
+  #
+  #### Output:
+  #
+  # ggplot tracks per tern, categorised by continuous behavior
+  
+  
+ggplot() +
+geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
+geom_point(data=df %>% filter(Complete == complete),show.legend = legendshow, 
+           aes(x=BNGX,y=BNGY, color = CONTBEH) )  +
+    
+    coord_fixed(ratio = 1.5, 
+                    xlim = c(df %>% filter(Complete == complete) %>% pull(BNGX) %>% min() - 
+                              df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() ,
+                             df %>% filter(Complete == complete) %>% pull(BNGX) %>% max()) +
+                             df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() , 
+                    ylim = c(df %>% filter(Complete == complete) %>% pull(BNGY) %>% min() - 
+                             df%>% filter(Complete == complete) %>% pull(BNGY) %>% sd(), 
+                             df %>% filter(Complete == complete) %>% pull(BNGY) %>% max()) + 
+                             df %>% filter(Complete == complete) %>% pull(BNGY) %>% sd() 
+                    )  +
+    ggtitle(str) +
+    theme(legend.position = "bottom")
+}
+```
+```{r plotboth function}
+plotcomplete_incomplete = function(df, title = "Title"){
+  #
+  #
+  # Plots both states by using the function "plotcomplete" 
+  #
+  # Returns a grid-plot with both Complete-Incomplete plots combined
+  
+  df_com = suppressMessages(plotcomplete(df, str = "Complete", complete = 1, legendshow = F))
+  df_incom = suppressMessages(plotcomplete(df, str = "Incomplete", complete = 0, legendshow = T))
+  grid = grid.arrange(df_com, df_incom, ncol = 2, top = title)
+  return(grid)
+}
+```
+
+```{r plotalltracks}
+plotalltracks = function(df_arctic, df_sand, df_common, df_rose){
+  
+  #
+  # Takes 4 dataframes as input (1 per species) and returns the 
+  # corresponding grids by using the function "plotcomplete_incomplete"
+  #
+  
+grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic")
+grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich")
+grid3 = plotcomplete_incomplete(df_common, title = "Common")
+grid4 = plotcomplete_incomplete(df_rose, title = "Roseate")
+}
+
+plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_revised,rose11.prepdata_revised)
 ```

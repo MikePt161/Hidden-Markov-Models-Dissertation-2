@@ -5,10 +5,12 @@ output: html_document
 
 ```{r setup, include=TRUE}
 #Loaded Libraries
-library(tidyverse)
-library(readxl)
+library(sp)        # Used for mapping
+library(rgdal)     # Used for mapping
+library(tidyverse) # Data Manipulation
+library(readxl)    # Read excel tables
 library(MASS)
-library(moveHMM)  
+library(moveHMM)  # Track spatial data and fit HMMs
 library(caret)    # make conf.matrices
 library(parallel) # parallel computing
 library(ggplot2)  # data visualisation
@@ -595,5 +597,24 @@ angle_per_species_2011 = grid.arrange(arcticplot_angle,commplot_angle,sandplot_a
 grid.arrange(step_per_species_2011,angle_per_species_2011, ncol =2, top = "Movement Characteristics by species and continuous behaviour" )
 ```
 ```{r}
-grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, top = "Confusion Matrices per species")
+grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, top = "Confusion Matrices per Species")
+```
+# Mapping 
+
+```{r initialise mapping Coordinates}
+setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Resources for Mapping")
+uk<-readOGR("GBR_adm1.shp") 
+ukgrid <- "+init=epsg:27700" 
+uk_ukgrid <- spTransform(uk, ukgrid)
+```
+
+```{r map}
+ggplot () + geom_point(data=chk11 %>% filter(ID == 5), aes (x=BNGX, y=BNGY))
+#plot of tern GPS points in British National Grid coordinate system
+```
+
+```{r}
+ggplot() +
+geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
+geom_point(data=chk11 %>% filter(SPECIES == "Arctic"), aes(x=BNGX,y=BNGY, color = ID))+coord_fixed(ratio = 1, xlim = c(min(chk11$BNGX),max(chk11$BNGX)), ylim = c(min(chk11$BNGY), max(chk11$BNGY)) )   #+ylim(5e+05,5.5e+05) + xlim(400000,50000)
 ```

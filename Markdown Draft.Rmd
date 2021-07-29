@@ -216,7 +216,7 @@ arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = st
 
 ```{r plot basic}
 #par(mfrow = c(1,2))
-plot(arc11_basic_m, plotCI = TRUE, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
+plot(arc11_basic_m, ask = F, plotCI = TRUE, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
 ```
 Fitting on a revised dataset, with "End" and "END" states being removed.\
 
@@ -235,7 +235,7 @@ disthmm = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = 
 ```
 \
 ```{r plot additional models}
-plot(disthmm, plotTracks = F)
+plot(disthmm, ask = F, plotTracks = F)
 ```
 
 \ 
@@ -470,7 +470,7 @@ sand_fit_m = fitHMM(data = sand11.prepdata_revised, nbStates = nbStates, stepPar
 ```
 \
 ```{r sand plot}
-plot(sand_fit_m,  plotTracks = F)
+plot(sand_fit_m, ask = F,  plotTracks = F)
 ```
 #### Confusion Matrix
 
@@ -509,7 +509,7 @@ common_fit_m = fitHMM(data = comm11.prepdata_revised, nbStates = nbStates, stepP
 ```
 
 ```{r plot common}
-plot(common_fit_m, plotTracks = F)
+plot(common_fit_m, ask = F, plotTracks = F)
 ```
 ```{r common confusion matrix}
 conf_common = confmatrx(common_fit_m,comm11.prepdata_revised)
@@ -550,7 +550,7 @@ rose_fit_m = fitHMM(data = rose11.prepdata_revised, nbStates = nbStates, stepPar
 ```
 \
 ```{r rose plot}
-plot(rose_fit_m, plotTracks = F)
+plot(rose_fit_m, plotTracks = F, ask = F)
 ```
 #### Confusion Matrix
 
@@ -602,6 +602,9 @@ grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, to
 ```
 # Mapping 
 
+\ 
+In the mapping section, the relevant plots will be produced and functions will be defined./
+
 ```{r initialise mapping Coordinates}
 setwd("C:/Users/mikep/OneDrive/Documents/University of Edinburgh/Dissertations/HMM Seabirds/Resources for Mapping")
 uk<-readOGR("GBR_adm1.shp") 
@@ -610,14 +613,9 @@ uk_ukgrid <- spTransform(uk, ukgrid)
 ```
 
 ```{r map per ID}
-ggplot () + geom_point(data=chk11 %>% filter(ID == 5), aes (x=BNGX, y=BNGY))
-#plot of tern GPS points in British National Grid coordinate system
-```
-
-```{r}
 ggplot() +
 geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
-geom_point(data=comm11.prepdata_revised %>% filter(ID == unique(comm11.prepdata_revised$ID)[2]), aes(x=BNGX,y=BNGY, color = CONTBEH))+coord_fixed(ratio = 1, xlim = c(425000,430000+5000), ylim = c(600000, 600000+10000) )
+geom_point(data=arc11.prepdata_revised %>% filter(ID == 59), aes(x=BNGX,y=BNGY, color = CONTBEH))+coord_fixed(ratio = 1, xlim = c(425000,430000+5000), ylim = c(600000, 600000+10000) )
 ```
 
 ```{r plotcomplete function}
@@ -685,6 +683,7 @@ grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich")
 grid3 = plotcomplete_incomplete(df_common, title = "Common")
 grid4 = plotcomplete_incomplete(df_rose, title = "Roseate")
 }
-
+```
+```{r call plot all tracks function}
 plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_revised,rose11.prepdata_revised)
 ```

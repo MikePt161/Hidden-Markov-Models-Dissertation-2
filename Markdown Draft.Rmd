@@ -10,6 +10,7 @@ library(rgdal)     # Used for mapping
 library(tidyverse) # Data Manipulation
 library(readxl)    # Read excel tables
 library(MASS)
+library(JointAI)
 library(moveHMM)  # Track spatial data and fit HMMs
 library(caret)    # make conf.matrices
 library(parallel) # parallel computing
@@ -34,9 +35,9 @@ chk11 = read_excel("Coquet_2011_chickrearing_Tern_Tracks.xlsx", sheet = 1,
                                  "numeric", # Track ID
                                  "skip","skip","skip", # skip HR MIN SEC
                                  "numeric","text",     # TSECS & CONTBEH
-                                 "skip","skip",  # INSTANTBEH, FORAGESUC,
-                                 "skip","skip", # PREYSIZE, PREYSPECIES
-                                 "skip","skip",   # PREYFATE, NOTES
+                                 "text","text",  # INSTANTBEH, FORAGESUC,
+                                 "text","text", # PREYSIZE, PREYSPECIES
+                                 "text","text",   # PREYFATE, NOTES
                                  "numeric","numeric", # BGNX, BGNY
                                  "numeric", "numeric", # LATITUDE, LONGITUDE
                                  "numeric","numeric", #DISTKM, DIST2COL
@@ -65,15 +66,22 @@ chk10 = read_excel("Coquet_2010_chickrearing_Tern_Tracks.xlsx", sheet = 1,
                                  "numeric", # Track ID
                                  "skip","skip","skip", # skip HR MIN SEC
                                  "numeric","text",     # TSECS & CONTBEH
-                                 "skip","skip",  # INSTANTBEH, FORAGESUC,
-                                 "skip","skip", # PREYSIZE, PREYSPECIES
-                                 "skip","skip",   # PREYFATE, NOTES
+                                 "text","text",  # INSTANTBEH, FORAGESUC,
+                                 "text","text", # PREYSIZE, PREYSPECIES
+                                 "text","text",   # PREYFATE, NOTES
                                  "numeric","numeric", # BGNX, BGNY
                                  "numeric", "numeric", # LATITUDE, LONGITUDE
                                  "numeric","numeric", #DISTKM, DIST2COL
                                  "numeric","numeric" # BRG2COL, COMPLETE
                    )
 )
+```
+
+```{r missing data}
+par(mfrow = c(1,2))
+md10 = md_pattern(chk10, pattern = F, c("black","red"))
+md11 = md_pattern(chk11, pattern = F, c("black","red"))
+grid.arrange(md10,md11, ncol = 2, top = "Missing Data Patterns in 2010 vs 2011 chickrearing seasons")
 ```
 
 ### Exploratory Data Analysis
@@ -92,21 +100,29 @@ revise = function(df){
 }
 ```
 
-```{r EDA}
+```{r EDA Dist 2 Col}
 plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic")), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
-  geom_boxplot() + ggtitle("2011") + xlab("")
+  geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("")
 plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(CONTBEH != "REST"), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
-  geom_boxplot() + ggtitle("2010") 
-grid.arrange(plot1,plot2)
+  geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom")
+DIST2COL_plot = grid.arrange(plot1,plot2)
 ```
-
-
+```{r EDA Dist 2 KM}
+plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic", DISTKM != max(DISTKM)) ), aes(x=SPECIES, y = DISTKM , fill = CONTBEH)) +
+  geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("")
+plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(CONTBEH != "REST"), aes(x=SPECIES, y = DISTKM, fill = CONTBEH)) +
+  geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom")
+DISTKM_plot = grid.arrange(plot1,plot2)
+```
+```{r}
+grid.arrange(DIST2COL_plot, DISTKM_plot, ncol = 2 )
+```
 
 ```{r select libraries}
 
-# copy dataset
+# copy dataset and select rows
 
-chk11_cl = chk11 
+chk11_cl = chk11 %>%  dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
 
 # Save species names
 speciesnames = unique(chk11_cl$SPECIES)
@@ -226,7 +242,7 @@ arc11_revised_m = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, ste
 ```
 
 ```{r plot revised}
-plot(arc11_revised_m,plotCI = T, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
+plot(arc11_revised_m,ask = F,plotCI = T, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
 ```
 \
 It has been concluded that adding more variables worsens model performance. Fitted states seem less sensible as well by using this model.\

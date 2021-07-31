@@ -84,9 +84,11 @@ md11 = md_pattern(chk11, pattern = F, c("black","red"))
 grid.arrange(md10,md11, ncol = 2, top = "Missing Data Patterns in 2010 vs 2011 chickrearing seasons")
 ```
 
+
 ### Exploratory Data Analysis
 
 \
+
 A function that removes the "END" and "End" states is defined at this point and will be used in the validation and exploratory data analysis parts.\
 ```{r revise prpData}
 # Removes End and End continuous statuses from prepData object
@@ -102,17 +104,19 @@ revise = function(df){
 
 ```{r EDA Dist 2 Col}
 plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic")), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
-  geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("")
+  geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("") + ylab("Dist to colony (m)")
 plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(CONTBEH != "REST"), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
-  geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom")
-DIST2COL_plot = grid.arrange(plot1,plot2)
+  geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom") + ylab("Dist to colony (m)") + 
+  guides(fill=guide_legend(title="Cont. Behaviour"))
+DIST2COL_plot = grid.arrange(plot1,plot2, top = "Continuous behaviour in relation to distance of tern from the colony")
 ```
 ```{r EDA Dist 2 KM}
 plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic", DISTKM != max(DISTKM)) ), aes(x=SPECIES, y = DISTKM , fill = CONTBEH)) +
-  geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("")
+  geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("") + ylab("Dist to tern (km)")
 plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(CONTBEH != "REST"), aes(x=SPECIES, y = DISTKM, fill = CONTBEH)) +
-  geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom")
-DISTKM_plot = grid.arrange(plot1,plot2)
+  geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom") + ylab("Dist to tern (km)") + theme(legend.position = "bottom") + 
+  guides(fill=guide_legend(title="Cont. Behaviour"))
+DISTKM_plot = grid.arrange(plot1,plot2, top =  "Continuous behaviour in relation to distance of tern from the colony")
 ```
 ```{r}
 grid.arrange(DIST2COL_plot, DISTKM_plot, ncol = 2 )
@@ -672,15 +676,20 @@ geom_point(data=df %>% filter(Complete == complete),show.legend = legendshow,
 }
 ```
 ```{r plotboth function}
-plotcomplete_incomplete = function(df, title = "Title"){
+plotcomplete_incomplete = function(df, title = "Title", legendshow = T){
   #
   #
-  # Plots both states by using the function "plotcomplete" 
+  # Plots both states by using the function "plotcomplete". 
+  # 
+  # Inputs: 
+  # df: dataframe
+  # title: string for title
+  # legendshow: whether any legend will be printed
   #
   # Returns a grid-plot with both Complete-Incomplete plots combined
   
   df_com = suppressMessages(plotcomplete(df, str = "Complete", complete = 1, legendshow = F))
-  df_incom = suppressMessages(plotcomplete(df, str = "Incomplete", complete = 0, legendshow = T))
+  df_incom = suppressMessages(plotcomplete(df, str = "Incomplete", complete = 0, legendshow = legendshow))
   grid = grid.arrange(df_com, df_incom, ncol = 2, top = title)
   return(grid)
 }
@@ -694,9 +703,9 @@ plotalltracks = function(df_arctic, df_sand, df_common, df_rose){
   # corresponding grids by using the function "plotcomplete_incomplete"
   #
   
-grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic")
-grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich")
-grid3 = plotcomplete_incomplete(df_common, title = "Common")
+grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic", legendshow = F)
+grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich", legendshow = F)
+grid3 = plotcomplete_incomplete(df_common, title = "Common", legendshow = F)
 grid4 = plotcomplete_incomplete(df_rose, title = "Roseate")
 }
 ```

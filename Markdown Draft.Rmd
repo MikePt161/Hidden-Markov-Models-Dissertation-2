@@ -77,13 +77,22 @@ chk10 = read_excel("Coquet_2010_chickrearing_Tern_Tracks.xlsx", sheet = 1,
 )
 ```
 
+\
+Firstly, the missingness plot is given in order to gain an understanding of which dataframe to use (2011 has much more many observations than the 2010 chickrearing one).\ 
+
 ```{r missing data}
 par(mfrow = c(1,2))
 md10 = md_pattern(chk10, pattern = F, c("black","red"))
 md11 = md_pattern(chk11, pattern = F, c("black","red"))
 grid.arrange(md10,md11, ncol = 2, top = "Missing Data Patterns in 2010 vs 2011 chickrearing seasons")
 ```
-
+\
+Secondly, the complete tracking ratio is also higher in the 2011 counterpart, as seen below. Besides the exploratory data analysis, the 2011 dataframe is thus preferred for the fitting procedure.
+\
+```{r}
+paste("complete ratio 2011:", round(sum(chk11$Complete)/nrow(chk11),3))
+paste("complete ratio 2010:", round(sum(chk10$Complete)/nrow(chk10),3))
+```
 
 ### Exploratory Data Analysis
 
@@ -102,6 +111,9 @@ revise = function(df){
 }
 ```
 
+\
+Continuous behaviour - tracking plots
+\
 ```{r EDA Dist 2 Col}
 plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic")), aes(x=SPECIES, y = DIST2COL, fill = CONTBEH)) +
   geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("") + ylab("Dist to colony (m)")
@@ -110,21 +122,29 @@ plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(C
   guides(fill=guide_legend(title="Cont. Behaviour"))
 DIST2COL_plot = grid.arrange(plot1,plot2, top = "Continuous behaviour in relation to distance of tern from the colony")
 ```
+Average distance of each observed behaviour from colony
+```{r}
+paste("TS:",chk11 %>% filter(CONTBEH == "TS") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
+paste("DF:", chk11 %>% filter(CONTBEH == "DF") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
+paste("AS:",chk11 %>% filter(CONTBEH == "AS") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
+```
+
 ```{r EDA Dist 2 KM}
 plot1 = ggplot(revise(chk11 %>% filter(SPECIES != "Common/Arctic", DISTKM != max(DISTKM)) ), aes(x=SPECIES, y = DISTKM , fill = CONTBEH)) +
   geom_boxplot(show.legend = F) + ggtitle("2011") + xlab("") + ylab("Dist to tern (km)")
 plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(CONTBEH != "REST"), aes(x=SPECIES, y = DISTKM, fill = CONTBEH)) +
   geom_boxplot(show.legend = T) + ggtitle("2010") + theme(legend.position = "bottom") + ylab("Dist to tern (km)") + theme(legend.position = "bottom") + 
   guides(fill=guide_legend(title="Cont. Behaviour"))
-DISTKM_plot = grid.arrange(plot1,plot2, top =  "Continuous behaviour in relation to distance of tern from the colony")
+DISTKM_plot = grid.arrange(plot1,plot2, top =  "Continuous behaviour in relation to distance of tern from the boat")
 ```
-```{r}
-grid.arrange(DIST2COL_plot, DISTKM_plot, ncol = 2 )
+```{r behavioural plots per species}
+ggplot(revise(chk11 %>% dplyr:: select(CONTBEH, FORAGESUCC, SPECIES, Complete)) %>% filter(FORAGESUCC != 9) %>% na.omit())  + geom_bar(aes(x = FORAGESUCC, y = (..count..), fill = CONTBEH))
 ```
 
-```{r select libraries}
 
-# copy dataset and select rows
+```{r select coiumns}
+
+# copy dataset and select appropriate columns
 
 chk11_cl = chk11 %>%  dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
 

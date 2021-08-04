@@ -89,7 +89,7 @@ grid.arrange(md10,md11, ncol = 2, top = "Missing Data Patterns in 2010 vs 2011 c
 \
 Secondly, the complete tracking ratio is also higher in the 2011 counterpart, as seen below. Besides the exploratory data analysis, the 2011 dataframe is thus preferred for the fitting procedure.
 \
-```{r}
+```{r complete ratios between dfs}
 paste("complete ratio 2011:", round(sum(chk11$Complete)/nrow(chk11),3))
 paste("complete ratio 2010:", round(sum(chk10$Complete)/nrow(chk10),3))
 ```
@@ -123,7 +123,7 @@ plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(C
 DIST2COL_plot = grid.arrange(plot1,plot2, top = "Continuous behaviour in relation to distance of tern from the colony")
 ```
 Average distance of each observed behaviour from colony
-```{r}
+```{r means DISTKM per behaviour}
 paste("TS:",chk11 %>% filter(CONTBEH == "TS") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
 paste("DF:", chk11 %>% filter(CONTBEH == "DF") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
 paste("AS:",chk11 %>% filter(CONTBEH == "AS") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
@@ -138,7 +138,7 @@ plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(C
 DISTKM_plot = grid.arrange(plot1,plot2, top =  "Continuous behaviour in relation to distance of tern from the boat")
 ```
 ```{r behavioural plots per species}
-ggplot(revise(chk11 %>% dplyr:: select(CONTBEH, FORAGESUCC, SPECIES, Complete)) %>% filter(FORAGESUCC != 9) %>% na.omit())  + geom_bar(aes(x = FORAGESUCC, y = (..count..), fill = CONTBEH))
+ggplot(revise(chk10 %>% dplyr:: select(CONTBEH, PREYFATE, FORAGESUCC, SPECIES, Complete)) %>% filter(FORAGESUCC != 9, CONTBEH != "KP", CONTBEH != "REST") %>% na.omit())  + geom_bar(aes(x = FORAGESUCC, y = (..count..), fill = PREYFATE))
 ```
 
 
@@ -251,7 +251,7 @@ angleMean0 = c(0,0)
 kappa0 = c(1,1)
 anglePar0 = c(angleMean0,kappa0)
 
-arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula, stepDist = stepDist, angleDist = angleDist)
 ```
 
 ```{r plot basic}
@@ -365,20 +365,31 @@ unlist(lapply(arctic_parallel_m, function(m) m$mod$minimum))
 \
 As shown by the histograms below, Transit Search (TS) along with direct flight (DF) are described by higher flight speed and low turns, something that is captured by State 2. On the other hand, Active search (AS) is quite the opposite and will be recoded as state 1. The confusion matrices are given below for all models.\
 ```{r 2 states histogram}
+analyse_histograms = function(df, title){
+  #
+  #
+  # Inputs: 
+  # df: dataframe to be used in plots
+  # title: Species
+  
+hist(df$step[which((df$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==2)] ,breaks = 55 , xlab = "Step", main = paste(title," - TS & DF"))
+hist(df$step[which((df$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==1)] ,breaks = 55 , xlab = "Step", main = paste(title," - AS"))
+hist(df$angle[which((df$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==2)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = paste(title," - TS & DF"))
+hist(df$angle[which((df$CONTBEH %>%
+         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
+         as.factor())==1)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = paste(title," - AS"))
+}
+
 par(mfrow = c(2,2))
-hist(arc11.prepdata_revised$step[which((arc11.prepdata_revised$CONTBEH %>%
-         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-         as.factor())==2)] ,breaks = 55 , xlab = "Step", main = "Arctic - TS & DF")
-hist(arc11.prepdata_revised$step[which((arc11.prepdata_revised$CONTBEH %>%
-         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-         as.factor())==1)] ,breaks = 55 , xlab = "Step", main = "Arctic - AS")
-hist(arc11.prepdata_revised$angle[which((arc11.prepdata_revised$CONTBEH %>%
-         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-         as.factor())==2)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = "")
-hist(arc11.prepdata_revised$angle[which((arc11.prepdata_revised$CONTBEH %>%
-         recode("TS" = 2, "AS" = 1, "DF" = 2) %>%
-         as.factor())==1)] ,seq(-pi,pi,l = 60) , xlab = "Angle", main = "")
+analyse_histograms(arc11.prepdata_revised, title = "Arctic")
 ```
+
 
 ```{r confusion matrix function}
 confmatrx = function(model, model_data){
@@ -602,20 +613,33 @@ heat_rose = heat_map_custom(conf_rose, "Roseate", x = 0.9, y =0.015, size = 2.5,
 
 ## Summarised Plots
 
+#### Histograms of Step Lengths and Turning Angles
+
+```{r analyse steps and turning angles}
+par(mfrow = c(2,4))
+analyse_histograms(arc11.prepdata_revised, title = "Arctic")
+analyse_histograms(sand11.prepdata_revised, title = "Sandwich")
+par(mfrow = c(2,4))
+analyse_histograms(comm11.prepdata_revised, title = "Common")
+analyse_histograms(rose11.prepdata_revised, title = "Roseate")
+```
+
+#### Boxplots of the above histograms
+
 ```{r Steps per species}
 arcticplot_step = ggplot(arc11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
-  geom_boxplot(show.legend = F) + ggtitle("Arctic") + xlab("") + ylab("Step")
+  geom_boxplot(show.legend = F) + ggtitle("Arctic") + xlab("") + ylab("Step-Length")
 
 commplot_step = ggplot(comm11.prepdata_revised, aes(x = CONTBEH ,y = step, fill = CONTBEH)) +
   geom_boxplot(show.legend = F) + ggtitle("Common") + xlab("") + ylab("")
 
 sandplot_step = ggplot(sand11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
-  geom_boxplot(show.legend = F) + ggtitle("Sandwich") + ylab("Step")
+  geom_boxplot(show.legend = F) + ggtitle("Sandwich") + ylab("Step-Length")
 
 roseplot_step = ggplot(rose11.prepdata_revised, aes(x = CONTBEH, y = step, fill = CONTBEH)) +
   geom_boxplot(show.legend = F) + ggtitle("Roseate") + ylab("")
 
-step_per_species_2011 = grid.arrange(arcticplot_step,commplot_step,sandplot_step,roseplot_step, nrow = 2 , ncol = 2, top =  "Step")
+step_per_species_2011 = grid.arrange(arcticplot_step,commplot_step,sandplot_step,roseplot_step, nrow = 2 , ncol = 2, top =  "Step-length")
 ```
 
 ```{r angle per species}
@@ -623,7 +647,7 @@ arcticplot_angle = ggplot(arc11.prepdata_revised %>% na.omit, aes(x = CONTBEH, y
   geom_boxplot(show.legend = F) + ggtitle("Arctic") + xlab("")
 
 commplot_angle = ggplot(comm11.prepdata_revised %>% na.omit, aes(x = CONTBEH ,y = angle, fill = CONTBEH)) +
-  geom_boxplot(show.legend = F) + ggtitle("Common")
+  geom_boxplot(show.legend = F) + ggtitle("Common") + xlab("")
 
 sandplot_angle = ggplot(sand11.prepdata_revised %>% na.omit, aes(x = CONTBEH, y = angle, fill = CONTBEH)) +
   geom_boxplot(show.legend = F) + ggtitle("Sandwich")
@@ -637,6 +661,8 @@ angle_per_species_2011 = grid.arrange(arcticplot_angle,commplot_angle,sandplot_a
 ```{r summarised step plot}
 grid.arrange(step_per_species_2011,angle_per_species_2011, ncol =2, top = "Movement Characteristics by species and continuous behaviour" )
 ```
+#### Confusion Matrices
+
 ```{r summarised confusion matrices}
 grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, top = "Confusion Matrices per Species")
 ```
@@ -659,7 +685,7 @@ geom_point(data=arc11.prepdata_revised %>% filter(ID == 59), aes(x=BNGX,y=BNGY, 
 ```
 
 ```{r plotcomplete function}
-plotcomplete = function(df, complete = 1, str = "Title", legendshow = F){
+plotcomplete = function(df, complete = 1, str = "Title", legendshow = F, viterbi = F){
   #
   #
   # Function that plots behavioural tracks of all birds based on complete/incomplete status
@@ -670,33 +696,61 @@ plotcomplete = function(df, complete = 1, str = "Title", legendshow = F){
   # complete:  1 for complete tracking, 0 for incomplete
   # str: string to be used in title
   # legendshow: whether to show legend or not
+  # viterbi: colors provided by T: viterbi states / F = CONTBEH states
   #
   #### Output:
   #
   # ggplot tracks per tern, categorised by continuous behavior
   
-  
-ggplot() +
-geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
-geom_point(data=df %>% filter(Complete == complete),show.legend = legendshow, 
-           aes(x=BNGX,y=BNGY, color = CONTBEH) )  +
     
-    coord_fixed(ratio = 1.5, 
-                    xlim = c(df %>% filter(Complete == complete) %>% pull(BNGX) %>% min() - 
-                              df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() ,
-                             df %>% filter(Complete == complete) %>% pull(BNGX) %>% max()) +
-                             df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() , 
-                    ylim = c(df %>% filter(Complete == complete) %>% pull(BNGY) %>% min() - 
-                             df%>% filter(Complete == complete) %>% pull(BNGY) %>% sd(), 
-                             df %>% filter(Complete == complete) %>% pull(BNGY) %>% max()) + 
-                             df %>% filter(Complete == complete) %>% pull(BNGY) %>% sd() 
-                    )  +
-    ggtitle(str) +
-    theme(legend.position = "bottom")
+  if (viterbi == T) {
+  
+  ggplot() +
+      #Initialise map of area
+  geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
+      # points in map
+  geom_point(data=df %>% filter(Complete == complete),show.legend = legendshow, 
+             aes(x=BNGX,y=BNGY, color = viterbi) )  +
+      # Fix plot coordinates
+      coord_fixed(ratio = 1.5, 
+                      xlim = c(df %>% filter(Complete == complete) %>% pull(BNGX) %>% min() - 
+                                df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() ,
+                               df %>% filter(Complete == complete) %>% pull(BNGX) %>% max()) +
+                               df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() , 
+                      ylim = c(df %>% filter(Complete == complete) %>% pull(BNGY) %>% min() - 
+                               df%>% filter(Complete == complete) %>% pull(BNGY) %>% sd(), 
+                               df %>% filter(Complete == complete) %>% pull(BNGY) %>% max()) + 
+                               df %>% filter(Complete == complete) %>% pull(BNGY) %>% sd() 
+                      )  +
+      ggtitle(str) +
+      theme(legend.position = "bottom")
+} else { 
+  
+  ggplot() +
+      #Initialise map of area
+  geom_polygon(data = uk_ukgrid, aes(x = long, y = lat, group = group), colour = "black", fill = NA) +
+      # points in map
+  geom_point(data=df %>% filter(Complete == complete),show.legend = legendshow, 
+             aes(x=BNGX,y=BNGY, color = CONTBEH) )  +
+      # Fix plot coordinates
+      coord_fixed(ratio = 1.5, 
+                      xlim = c(df %>% filter(Complete == complete) %>% pull(BNGX) %>% min() - 
+                                df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() ,
+                               df %>% filter(Complete == complete) %>% pull(BNGX) %>% max()) +
+                               df %>% filter(Complete == complete) %>% pull(BNGX) %>% sd() , 
+                      ylim = c(df %>% filter(Complete == complete) %>% pull(BNGY) %>% min() - 
+                               df%>% filter(Complete == complete) %>% pull(BNGY) %>% sd(), 
+                               df %>% filter(Complete == complete) %>% pull(BNGY) %>% max()) + 
+                               df %>% filter(Complete == complete) %>% pull(BNGY) %>% sd() 
+                      )  +
+      ggtitle(str) +
+      theme(legend.position = "bottom")
+  }
 }
 ```
+
 ```{r plotboth function}
-plotcomplete_incomplete = function(df, title = "Title", legendshow = T){
+plotcomplete_incomplete = function(df, title = "Title", legendshow = T, viterbi = F){
   #
   #
   # Plots both states by using the function "plotcomplete". 
@@ -705,30 +759,69 @@ plotcomplete_incomplete = function(df, title = "Title", legendshow = T){
   # df: dataframe
   # title: string for title
   # legendshow: whether any legend will be printed
+  # viterbi: passed on to the plotcomplete function
   #
   # Returns a grid-plot with both Complete-Incomplete plots combined
   
-  df_com = suppressMessages(plotcomplete(df, str = "Complete", complete = 1, legendshow = F))
-  df_incom = suppressMessages(plotcomplete(df, str = "Incomplete", complete = 0, legendshow = legendshow))
+  df_com = suppressMessages(plotcomplete(df, str = "Complete", complete = 1, legendshow = F, viterbi = viterbi))
+  df_incom = suppressMessages(plotcomplete(df, str = "Incomplete", complete = 0, legendshow = legendshow, viterbi = viterbi))
   grid = grid.arrange(df_com, df_incom, ncol = 2, top = title)
   return(grid)
 }
 ```
 
 ```{r plotalltracks}
-plotalltracks = function(df_arctic, df_sand, df_common, df_rose){
+plotalltracks = function(df_arctic, df_sand, df_common, df_rose, legendshow_final = T, viterbi_par = F){
   
   #
   # Takes 4 dataframes as input (1 per species) and returns the 
   # corresponding grids by using the function "plotcomplete_incomplete"
   #
+  if (viterbi_par == F){
+    
+    grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic", legendshow = F, viterbi = viterbi_par)
+    grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich", legendshow = F, viterbi = viterbi_par)
+    grid3 = plotcomplete_incomplete(df_common, title = "Common", legendshow = F, viterbi = viterbi_par)
+    grid4 = plotcomplete_incomplete(df_rose, title = "Roseate", legendshow = legendshow_final, viterbi = viterbi)
   
-grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic", legendshow = F)
-grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich", legendshow = F)
-grid3 = plotcomplete_incomplete(df_common, title = "Common", legendshow = F)
-grid4 = plotcomplete_incomplete(df_rose, title = "Roseate")
+    } else {
+    
+    title1 = "Viterbi"
+    title2 = "Observed"
+    
+    
+    grid1_v = plotcomplete_incomplete(df_arctic %>% filter(viterbi==1), title = title1, legendshow = F, viterbi = T)
+    grid1_o = plotcomplete_incomplete(df_arctic %>% filter(CONTBEH=="AS"), title = title2, legendshow = F, viterbi = F)
+    grid.arrange(grid1_v,grid1_o, nrow = 2, left = "Arctic Foraging Locations")  
+    
+    grid1_v = plotcomplete_incomplete(df_sand %>% filter(viterbi==1), title = title1, legendshow = F, viterbi = T)
+    grid1_o = plotcomplete_incomplete(df_sand %>% filter(CONTBEH=="AS"), title = title2, legendshow = F, viterbi = F)
+    grid.arrange(grid1_v,grid1_o, ncol = 2, left = "Sandiwch Foraging Locations")
+    
+    grid1_v = plotcomplete_incomplete(df_common %>% filter(viterbi==1), title = title1, legendshow = F, viterbi = T)
+    grid1_o = plotcomplete_incomplete(df_common %>% filter(CONTBEH=="AS"), title = title2, legendshow = F, viterbi = F)
+    grid.arrange(grid1_v,grid1_o, ncol = 2, left = "Common Foraging Locations")
+    
+    grid1_v = plotcomplete_incomplete(df_rose %>% filter(viterbi==1), title = title1, legendshow = F, viterbi = T)
+    grid1_o = plotcomplete_incomplete(df_rose %>% filter(CONTBEH=="AS"), title = title2, legendshow = F, viterbi = F)
+    grid.arrange(grid1_v,grid1_o, ncol = 2, left = "Roseate Foraging Locations")
+  }
+  
 }
 ```
-```{r call plot all tracks function}
+```{r call plot all tracks function - used in mapping states}
 plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_revised,rose11.prepdata_revised)
 ```
+
+```{r set viterbi columns }
+arc11.prepdata_revised$viterbi = viterbi(arc11_revised_m)
+sand11.prepdata_revised$viterbi = viterbi(sand_fit_m)
+rose11.prepdata_revised$viterbi = viterbi(rose_fit_m)
+comm11.prepdata_revised$viterbi = viterbi(common_fit_m)
+```
+
+```{r compare viterbi foraging ares with true ones}
+plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_revised,rose11.prepdata_revised, viterbi_par = T)
+```
+
+

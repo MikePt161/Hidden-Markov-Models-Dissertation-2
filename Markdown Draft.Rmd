@@ -256,7 +256,7 @@ arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = st
 
 ```{r plot basic}
 #par(mfrow = c(1,2))
-plot(arc11_basic_m, ask = F, plotCI = TRUE, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
+plot(arc11_basic_m, ask = F, plotCI = TRUE, plotTracks = FALSE, breaks = 50)
 ```
 Fitting on a revised dataset, with "End" and "END" states being removed.\
 
@@ -265,8 +265,9 @@ Fitting on a revised dataset, with "End" and "END" states being removed.\
 arc11_revised_m = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
 
-```{r plot revised}
-plot(arc11_revised_m,ask = F,plotCI = T, plotTracks = FALSE)#, breaks = seq(0,0.019,l=60))
+```{r arctic plot revised}
+par(mfrow = c(1,2))
+plot(arc11_revised_m,ask = F,plotCI = T, plotTracks = FALSE, breaks = 50)
 ```
 \
 It has been concluded that adding more variables worsens model performance. Fitted states seem less sensible as well by using this model.\
@@ -275,7 +276,8 @@ disthmm = fitHMM(data = arc11.prepdata_revised, nbStates = nbStates, stepPar0 = 
 ```
 \
 ```{r plot additional models}
-plot(disthmm, ask = F, plotTracks = F)
+par(mfrow = c(1,2))
+plot(disthmm, ask = F, plotTracks = F, breaks = 50)
 ```
 
 \ 
@@ -563,7 +565,8 @@ likelihoodtest(sand_parallel_m,sand_fit_m)
 \
 
 ```{r sand plot}
-plot(sand_fit_m, ask = F,  plotTracks = F)
+par(mfrow = c(1,2))
+plot(sand_fit_m, ask = F,  plotTracks = F, breaks = 50)
 ```
 #### Confusion Matrix
 
@@ -602,7 +605,8 @@ common_fit_m = fitHMM(data = comm11.prepdata_revised, nbStates = nbStates, stepP
 likelihoodtest(common_parallel_m,common_fit_m)
 ```
 ```{r plot common}
-plot(common_fit_m, ask = F, plotTracks = F)
+par(mfrow = c(1,2))
+plot(common_fit_m, ask = F, plotTracks = F, breaks = 50)
 ```
 ```{r common confusion matrix}
 conf_common = confmatrx(common_fit_m,comm11.prepdata_revised)
@@ -645,7 +649,8 @@ likelihoodtest(rose_parallel_m, rose_fit_m)
 ```
 \
 ```{r rose plot}
-plot(rose_fit_m, plotTracks = F, ask = F)
+par(mfrow = c(1,2))
+plot(rose_fit_m, plotTracks = F, ask = F, breaks = 50)
 ```
 #### Confusion Matrix
 

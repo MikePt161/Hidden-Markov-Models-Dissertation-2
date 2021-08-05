@@ -777,6 +777,17 @@ plotalltracks = function(df_arctic, df_sand, df_common, df_rose, legendshow_fina
   # Takes 4 dataframes as input (1 per species) and returns the 
   # corresponding grids by using the function "plotcomplete_incomplete"
   #
+  # # Inputs:
+  # df_arctic,..., df_rose = dataframes per species
+  # legendshow_final = whether the last gridplot will have a legend or not
+  # viterbi_par = F : actual CONBTEH - Coordinate track observations will be plotted
+  #               T : viterbi state 1 states will be visually evalueated against "AS" true states
+  # # Outputs
+  # viterbi_par sets the output which will be either tern track plots of observed behaviours (F) or
+  # "predicted" state 1-"AS" (T)
+  #
+  
+  
   if (viterbi_par == F){
     
     grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic", legendshow = F, viterbi = viterbi_par)

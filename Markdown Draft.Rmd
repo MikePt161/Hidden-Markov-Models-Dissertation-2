@@ -357,8 +357,46 @@ arctic_parallel_m = fit_experiment("arc11.prepdata_revised", arc11.prepdata_revi
 
 \
 All values depict the same likelihood for ~1 function. Therefore the likelihood has been maximised adequately.
-```{r print likelihoods arctic}
-unlist(lapply(arctic_parallel_m, function(m) m$mod$minimum))
+```{r likelihood test}
+likelihoodtest = function(modelparallel, modelfit, numericalapprox = 20){
+  #
+  #
+  # Checks for approximation between paralell experiment and fitted values with
+  # precision in numericalapprox decimals
+  #
+  ### Inputs:
+  #
+  # modelparallel: list object containing 5 fitted models
+  # modelfit: moveHMM fited model
+  # numericalapprox: number of decimals to be evaluated. Starts with a precision
+  # of 20 decimals and moves to lower acurracy until  the condition is met
+  # 
+  #
+  minvalue = (unlist(lapply(modelparallel, function(m) m$mod$minimum))) %>% min()
+  
+  check = F
+  while (check == F){
+    
+    value_parallel = minvalue %>% round(numericalapprox)
+    value_model =  modelfit$mod$minimum %>% round(numericalapprox)
+   
+     condition = value_parallel == value_model 
+      
+      
+    
+    if (condition == T){
+      check = T
+      print(paste("Convergence between parallel and model fit is reached with precision in",numericalapprox,"decimals"))
+      print(paste("Parallel min Likelihood:",value_parallel,", Model Likelihood:",value_model))
+    } else {
+      numericalapprox = numericalapprox - 1
+    }
+  }
+  
+  
+}
+
+likelihoodtest(arctic_parallel_m, arc11_revised_m)
 ```
 
 #### Confusion Matrices
@@ -510,16 +548,20 @@ As previously we will run a parallel experiment to evaluate convergence.\
 sand_parallel_m = fit_experiment("sand11.prepdata_revised",sand11.prepdata_revised)
 ```
 
-```{r print likelihoods sand}
-# Print likelihoods
-unlist(lapply(sand_parallel_m, function(m) m$mod$minimum))
-```
 \
-Convergence is reached based on the above results.
+
 ```{r sand fit}
 sand_fit_m = fitHMM(data = sand11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
 \
+
+Convergence is reached based on the above results.
+```{r print likelihoods sand}
+# Print likelihoods
+likelihoodtest(sand_parallel_m,sand_fit_m)
+```
+\
+
 ```{r sand plot}
 plot(sand_fit_m, ask = F,  plotTracks = F)
 ```
@@ -551,14 +593,14 @@ hist(comm11.prepdata_revised$angle,seq(-pi,pi,l=40))
 common_parallel_m = fit_experiment("comm11.prepdata_revised",comm11.prepdata_revised)
 ```
 
-```{r print likelihoods common}
-# Print likelihoods
-unlist(lapply(common_parallel_m, function(m) m$mod$minimum))
-```
 ```{r common fit}
 common_fit_m = fitHMM(data = comm11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
 ```
 
+```{r print likelihoods common}
+# Print likelihoods
+likelihoodtest(common_parallel_m,common_fit_m)
+```
 ```{r plot common}
 plot(common_fit_m, ask = F, plotTracks = F)
 ```
@@ -590,14 +632,16 @@ hist(rose11.prepdata_revised$angle,seq(-pi,pi,l=40))
 rose_parallel_m = fit_experiment("rose11.prepdata_revised",rose11.prepdata_revised)
 ```
 
-```{r print likelihoods rose}
-# Print likelihoods
-unlist(lapply(rose_parallel_m, function(m) m$mod$minimum))
-```
+
 \
 Convergence is reached based on the above results.
 ```{r rose fit}
 rose_fit_m = fitHMM(data = rose11.prepdata_revised, nbStates = nbStates, stepPar0 = stepPar0, anglePar0 = anglePar0, formula = formula)
+```
+\
+```{r print likelihoods rose}
+# Print likelihoods
+likelihoodtest(rose_parallel_m, rose_fit_m)
 ```
 \
 ```{r rose plot}

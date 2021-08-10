@@ -487,7 +487,7 @@ ggplot(as.data.frame(matrixobject$table), aes(x=Reference,y=Prediction, fill = F
     xlab(xlab) + ylab(ylab) + 
     ggtitle(paste(str))+
    scale_fill_distiller(palette = "Greens") + 
-   geom_text(aes(label= paste(100*round(Freq/sum(Freq),4),"%"))) + 
+   geom_text(aes(label= paste(100*round(Freq/sum(Freq),4),"%\n", Freq ))) + 
     guides(fill = guide_legend(title = "Accurracy"))+
     # Print acurracy of model extracted by matrix object
     annotate("text", x=x,y = y, label = paste("Overall Acurracy:", 100*as.numeric(round(matrixobject$overall[1],4)),"%" ) , size = size)+
@@ -882,6 +882,4 @@ comm11.prepdata_revised$viterbi = viterbi(common_fit_m)
 
 ```{r compare viterbi foraging ares with true ones}
 plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_revised,rose11.prepdata_revised, viterbi_par = T)
-```
-
-
+``` 

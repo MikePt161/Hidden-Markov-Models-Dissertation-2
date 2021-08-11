@@ -883,3 +883,11 @@ comm11.prepdata_revised$viterbi = viterbi(common_fit_m)
 ```{r compare viterbi foraging ares with true ones}
 plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_revised,rose11.prepdata_revised, viterbi_par = T)
 ``` 
+
+
+```{r pseudoresidual plots}
+pseud_arc = plotPR(arc11_revised_m)
+pseud_sand = plotPR(sand_fit_m)
+pseud_comm =  plotPR(common_fit_m)
+pseud_rose = plotPR(rose_fit_m)
+```

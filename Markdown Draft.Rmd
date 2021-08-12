@@ -152,7 +152,7 @@ DISTKM_plot = grid.arrange(plot1,plot2, top =  "Continuous behaviour in relation
 
 # copy dataset and select appropriate columns
 
-chk11_cl = chk11 %>%  dplyr:: select(DATE,SPECIES,TRACKID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
+chk11_cl = chk11 %>%  dplyr:: select(DATE,SPECIES,ID,TSECS,CONTBEH,BNGX,BNGY,LATITUDE,LONGITUDE,DISTKM,DIST2COL,BRG2COL,Complete)
 
 # Save species names
 speciesnames = unique(chk11_cl$SPECIES)
@@ -862,7 +862,7 @@ plotalltracks = function(df_arctic, df_sand, df_common, df_rose, legendshow_fina
     grid1 = plotcomplete_incomplete(df_arctic, title = "Arctic", legendshow = F, viterbi = viterbi_par)
     grid2 = plotcomplete_incomplete(df_sand, title = "Sandwich", legendshow = F, viterbi = viterbi_par)
     grid3 = plotcomplete_incomplete(df_common, title = "Common", legendshow = F, viterbi = viterbi_par)
-    grid4 = plotcomplete_incomplete(df_rose, title = "Roseate", legendshow = legendshow_final, viterbi = viterbi)
+    grid4 = plotcomplete_incomplete(df_rose, title = "Roseate", legendshow = legendshow_final, viterbi = viterbi_par)
   
     } else {
     

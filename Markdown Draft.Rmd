@@ -363,7 +363,7 @@ arctic_parallel_m = fit_experiment("arc11.prepdata_revised", arc11.prepdata_revi
 ```
 
 \
-All values depict the same likelihood for ~1 function. Therefore the likelihood has been maximised adequately.
+All values depict the same likelihood for ~1 function. Therefore the likelihood has been maximised adequately.\
 ```{r likelihood test}
 likelihoodtest = function(modelparallel, modelfit, numericalapprox = 20){
   #
@@ -403,6 +403,8 @@ likelihoodtest = function(modelparallel, modelfit, numericalapprox = 20){
   
 }
 
+# Perform test for arctic
+
 likelihoodtest(arctic_parallel_m, arc11_revised_m)
 ```
 
@@ -434,7 +436,6 @@ hist(df$angle[which((df$CONTBEH %>%
 par(mfrow = c(2,2))
 analyse_histograms(arc11.prepdata_revised, title = "Arctic")
 ```
-
 
 ```{r confusion matrix function}
 confmatrx = function(model, model_data){

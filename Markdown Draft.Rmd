@@ -9,7 +9,6 @@ library(sp)        # Used for mapping
 library(rgdal)     # Used for mapping
 library(tidyverse) # Data Manipulation
 library(readxl)    # Read excel tables
-library(MASS)
 library(JointAI)
 library(moveHMM)  # Track spatial data and fit HMMs
 library(caret)    # make conf.matrices
@@ -17,6 +16,17 @@ library(parallel) # parallel computing
 library(ggplot2)  # data visualisation
 library(gridExtra)
 ```
+\
+\
+The following file is organised in the following sections:\
+1) Load Data: loading procedure of data frames \
+2) Exploratory Data Analysis: Plots shown in Section 2 of report\
+3) prepData, fitHMM, plots per species. \
+4) Summarised Plots: Used in Sections 2 and 4 of the analysis \
+5) Mapping: Includes all map plots demonstrated in sections 2 and 4 of the report\
+
+
+
 
 ### Load Data
 
@@ -122,7 +132,8 @@ plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(C
   guides(fill=guide_legend(title="Cont. Behaviour"))
 DIST2COL_plot = grid.arrange(plot1,plot2, top = "Continuous behaviour in relation to distance of tern from the colony")
 ```
-Average distance of each observed behaviour from colony
+\
+Average distance of each observed behaviour from colony: \
 ```{r means DISTKM per behaviour}
 paste("TS:",chk11 %>% filter(CONTBEH == "TS") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
 paste("DF:", chk11 %>% filter(CONTBEH == "DF") %>% dplyr:: select(DIST2COL) %>% colMeans() %>% round(3))
@@ -137,11 +148,6 @@ plot2 = ggplot(revise(chk10 %>% filter(SPECIES != "Common/Arctic")) %>% filter(C
   guides(fill=guide_legend(title="Cont. Behaviour"))
 DISTKM_plot = grid.arrange(plot1,plot2, top =  "Continuous behaviour in relation to distance of tern from the boat")
 ```
-```{r behavioural plots per species}
-ggplot(revise(chk10 %>% dplyr:: select(CONTBEH, PREYFATE, FORAGESUCC, SPECIES, Complete)) %>% filter(FORAGESUCC != 9, CONTBEH != "KP", CONTBEH != "REST") %>% na.omit())  + geom_bar(aes(x = FORAGESUCC, y = (..count..), fill = PREYFATE))
-```
-
-
 ```{r select coiumns}
 
 # copy dataset and select appropriate columns
@@ -255,7 +261,6 @@ arc11_basic_m = fitHMM(data = arc11.prepdata, nbStates = nbStates, stepPar0 = st
 ```
 
 ```{r plot basic}
-#par(mfrow = c(1,2))
 plot(arc11_basic_m, ask = F, plotCI = TRUE, plotTracks = FALSE, breaks = 50)
 ```
 Fitting on a revised dataset, with "End" and "END" states being removed.\
@@ -662,6 +667,10 @@ heat_rose = heat_map_custom(conf_rose, "Roseate", x = 0.9, y =0.015, size = 2.5,
 
 ## Summarised Plots
 
+\
+\
+Plots used throughout the report are presented in this section.\
+
 #### Histograms of Step Lengths and Turning Angles
 
 ```{r analyse steps and turning angles}
@@ -715,6 +724,16 @@ grid.arrange(step_per_species_2011,angle_per_species_2011, ncol =2, top = "Movem
 ```{r summarised confusion matrices}
 grid.arrange(heat_arctic,heat_sand,heat_common,heat_rose, ncol = 2, nrow = 2, top = "Confusion Matrices per Species")
 ```
+
+#### Pseudoresidual Plots 
+
+```{r pseudoresidual plots}
+pseud_arc = plotPR(arc11_revised_m)
+pseud_sand = plotPR(sand_fit_m)
+pseud_comm =  plotPR(common_fit_m)
+pseud_rose = plotPR(rose_fit_m)
+```
+
 # Mapping 
 
 \ 
@@ -885,9 +904,3 @@ plotalltracks(arc11.prepdata_revised, sand11.prepdata_revised,comm11.prepdata_re
 ``` 
 
 
-```{r pseudoresidual plots}
-pseud_arc = plotPR(arc11_revised_m)
-pseud_sand = plotPR(sand_fit_m)
-pseud_comm =  plotPR(common_fit_m)
-pseud_rose = plotPR(rose_fit_m)
-```
